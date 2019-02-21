@@ -1197,7 +1197,7 @@ setting_infos = [
                 disable both versions if that is the intent.
             '''
         },
-        exclude_rando=True
+        exclude_random=True
     ),
     Setting_Info(
         name           = 'allowed_tricks',
@@ -1792,12 +1792,7 @@ setting_infos = [
                 'except_hints': 'Shuffled except Hints and Keys',
                 'complete':     'All Text Shuffled',
                 },
-            args_help      = '''\
-                             Choose maximum shuffle the game's messages.
-                             none:          Default behavior
-                             except_hints:  All non-useful text is shuffled.
-                             complete:      All text is shuffled.
-                             ''',
+            
             gui_text       = 'Maximum Text Shuffle',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1816,14 +1811,7 @@ setting_infos = [
                 'quadruple': 'Quadruple',
                 'ohko':      'OHKO',
                 },
-            args_help      = '''\
-                             Change the amount of damage taken.
-                             half:           Half damage taken.
-                             normal:         Normal damage taken.
-                             double:         Double damage taken.
-                             quadruple:      Quadruple damage taken.
-                             ohko:           Link will die in one hit.
-                             ''',
+            
             gui_text       = 'Maximum Damage Multiplier',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1844,15 +1832,7 @@ setting_infos = [
                 'dungeons':   'All Dungeons',
                 'tokens':     '100 Gold Skulltula Tokens'
                 },
-            args_help      = '''\
-                             Select requirement to spawn the Rainbow Bridge to reach Ganon's Castle. (default: %(default)s)
-                             open:       The bridge will spawn without an item requirement.
-                             vanilla:    Collect only the Shadow and Spirit Medallions and possess the Light Arrows.
-                             stones:     Collect all three Spiritual Stones to create the bridge.
-                             medallions: Collect all six Medallions to create the bridge.
-                             dungeons:   Collect all Spiritual Stones and all Medallions to create the bridge.
-                             tokens:     Collect all 100 Gold Skulltula tokens.
-                             ''',
+            
             gui_text       = 'Rainbow Bridge Max Requirement',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1870,17 +1850,7 @@ setting_infos = [
                 'regular': 'On (Expensive)',
                 'random':  'On (Random Prices)',
                 },
-            args_help      = '''\
-                             Deku Scrub Salesmen are randomized:
-                             off:        Only the 3 Scrubs that give one-time items
-                                         in the vanilla game will have random items.
-                             low:        All Scrubs will have random items and their
-                                         prices will be reduced to 10 rupees each.
-                             regular:    All Scrubs will have random items and each
-                                         of them will demand their vanilla prices.
-                             random:     All Scrubs will have random items and their
-                                         price will also be random between 10-99 rupees.
-                             ''',
+           
             gui_text       = 'Max Scrub Shuffle',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1913,13 +1883,7 @@ setting_infos = [
                 'dungeons': 'Dungeons Only',
                 'all':      'All Tokens',
                 },
-            args_help      = '''\
-                             Gold Skulltula Tokens will be shuffled into the pool,
-                             and Gold Skulltula locations can have any item.
-                             off:        Don't use this feature
-                             dungeons:   Only dungeon Skulltulas will be shuffled
-                             all:        All Gold Skulltulas will be shuffled
-                             ''',
+           
             gui_text       = 'Max Tokensanity Setting',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1938,14 +1902,7 @@ setting_infos = [
                 'mayhem':    'Ice Trap Mayhem',
                 'onslaught': 'Ice Trap Onslaught',
                 },
-            args_help      = '''\
-                             Choose how Ice Traps will be placed in the junk item pool
-                             off:       Ice traps are removed.
-                             normal:    Default behavior; no ice traps in the junk item pool.
-                             on:        Ice Traps will be placed in the junk item pool.
-                             mayhem:    All added junk items will be ice traps.
-                             onslaught: All junk items will be ice traps, even those in the base item pool.
-                             ''',
+            
             gui_text       = 'Max Ice Traps',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1963,15 +1920,7 @@ setting_infos = [
                 'scarce':    'Scarce',
                 'minimal':   'Minimal'
                 },
-            args_help      = '''\
-                             Change the item pool for an added challenge.
-                             plentiful:      Duplicates most of the major items, making it easier to find progression.
-                             balanced:       Default items
-                             scarce:         Double defense, double magic, and all 8 heart containers are removed. Ammo
-                                             for each type can only be expanded once and you can only find three Bombchu packs.
-                             minimal:        Double defense, double magic, Nayru's Love, and all health upgrades are removed.
-                                             No ammo expansions are available and you can only find one Bombchu pack.
-                             ''',
+        
             gui_text       = 'Max Item Pool difficulty',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
@@ -1993,9 +1942,6 @@ setting_infos = [
     Checkbutton(
             name           = 'disallow_random_tricks',
             default         = True,
-            args_help      = '''\
-                             If not selected random hints will be taken into account for logic
-                             ''',
             gui_text       = 'Disallow tricks',
             gui_group      = 'random_settings',
             gui_tooltip    = '''\
