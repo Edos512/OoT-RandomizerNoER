@@ -682,6 +682,12 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
             rom.write_int16(special, target_indexes[0])
 
     if world.shuffle_dungeon_entrances:
+
+        remove_entrance_blockers(rom)
+        #Tell the Deku tree jaw actor we are always a child.
+        rom.write_int32(0x0C72C64, 0x240E0000)
+        rom.write_int32(0x0C72C74, 0x240F0001)
+
         for location in world.get_filled_locations():
             if location.type != "Entrance":
                 continue;
@@ -1576,6 +1582,17 @@ def get_override_itemid(override_table, scene, type, flags):
             return entry[4]
     return None
 
+def remove_entrance_blockers(rom):
+    def remove_entrance_blockers_do(rom, actor_id, actor, scene):
+        if actor_id == 0x014E and scene == 97:
+            actor_var = rom.read_int16(actor + 14);
+            if actor_var == 0xFF01:
+                rom.write_int16(actor + 14, 0x0700)
+        if actor_id == 0x0145:
+            rom.write_int16(actor, 0x014E)
+            rom.write_int16(actor + 14, 0x0700)
+
+    get_actor_list(rom, remove_entrance_blockers_do)
 
 def set_cow_id_data(rom, world):
     def set_cow_id(rom, actor_id, actor, scene):

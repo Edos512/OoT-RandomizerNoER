@@ -46,7 +46,7 @@
             "Deku Tree Gossip Stone (Left)": "True",
             "Deku Tree Gossip Stone (Right)": "True",
             "Child Deku Tree": "True",
-            "Adult Deku Tree": "False"
+            "Adult Deku Tree": "is_adult and shuffle_dungeon_entrances"
         },
         "exits": {
             "Kokiri Forest" : "True"
@@ -599,7 +599,7 @@
                     (damage_multiplier != 'ohko' or has_bottle or can_use(Nayrus_Love)))) and nighttime",
             "GS Kakariko Above Impa's House": "can_use(Hookshot) and nighttime",
             "Child Bottom of the Well": "can_play(Song_of_Storms)",
-            "Adult Bottom of the Well": "False"
+            "Adult Bottom of the Well": "is_adult and shuffle_dungeon_entrances"
         },
         "exits": {
             "Hyrule Field": "True",
@@ -923,9 +923,14 @@
             "Sheik in Crater": "is_adult",
             "GS Mountain Crater Bean Patch": "
                 can_play(Bolero_of_Fire) and has_bottle and can_child_attack",
+            # This logic sucks, but I really want child Fire Temple in ER for with no tunic
+            # as its a super easy dash coming from the bolero warp. Make it consistent with
+            # adult with child by removing tunic if adule has bolero, but only on shuffled
+            # entrances
             "Adult Fire Temple": "
-                is_adult and (logic_fewer_tunic_requirements or has_GoronTunic)",
-            "Child Fire Temple": "False"
+                is_adult and (logic_fewer_tunic_requirements or has_GoronTunic or 
+                              (shuffle_dungeon_entrances and can_play(Bolero_of_Fire)))",
+            "Child Fire Temple": "can_play(Bolero_of_Fire) and shuffle_dungeon_entrances"
         },
         "exits": {
             "Death Mountain Crater Lower": "
