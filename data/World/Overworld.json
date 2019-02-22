@@ -708,6 +708,7 @@
     {
         "region_name": "Dampes Grave",
         "locations": {
+            "Dampes Grave Nut Pot": "True",
             "Hookshot Chest": "True",
             "Dampe Race Freestanding PoH": "True"
         }
@@ -780,7 +781,8 @@
             "GS Goron City Center Platform": "is_adult",
             "Goron City Stick Pot": "
                 open_kakariko or Zeldas_Letter or 
-                has_explosives or can_use(Dins_Fire)"
+                can_blast_or_smash or can_use(Dins_Fire) or can_use(Bow) or 
+                (is_adult and Progressive_Strength_Upgrade)"
         },
         "exits": {
             "Death Mountain": "True",

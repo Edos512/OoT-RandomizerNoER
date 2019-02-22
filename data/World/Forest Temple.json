@@ -33,6 +33,8 @@
         "region_name": "Forest Temple NE Outdoors",
         "dungeon": "Forest Temple",
         "locations": {
+            "Forest Temple Deku Baba Nuts": "True",
+            "Forest Temple Deku Baba Sticks": "True",
             "Forest Temple Outside Hookshot Chest": "
                 can_use(Hookshot) or
                 can_reach(Forest_Temple_Falling_Room)",
