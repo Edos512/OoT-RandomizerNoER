@@ -31,8 +31,6 @@ class World(object):
         self.shop_prices = {}
         self.scrub_prices = {}
         self.light_arrow_location = None
-        #temporary
-        self.shuffle_dungeon_entrances = False
 
         # dump settings directly into world's namespace
         # this gives the world an attribute for every setting listed in Settings.py
