@@ -1,4 +1,3 @@
-from Utils import traverse
 from collections import Counter, defaultdict
 import copy
 
@@ -458,9 +457,12 @@ class State(object):
         new_state_list = []
         for base_state in base_state_list:
             new_state = base_state.copy()
-            for item in traverse(itempool):
-                if item.world.id == base_state.world.id: # Check world
-                    new_state.collect(item)
+            for item in itempool:
+                linked_item = item
+                while linked_item is not None:
+                    if linked_item.world.id == base_state.world.id: # Check world
+                        new_state.collect(linked_item)
+                    linked_item = linked_item.next
             new_state_list.append(new_state)
         State.collect_locations(new_state_list)
         return new_state_list
