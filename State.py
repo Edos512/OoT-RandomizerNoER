@@ -298,6 +298,20 @@ class State(object):
             (self.can_leave_forest() or self.has_sticks() or self.has('Kokiri Sword') or 
              self.has('Boomerang') or self.has_explosives() or self.has('Buy_Bottle_Bug'))
 
+    def has_projectile_here(self, age='either'):
+        as_adult = self.is_adult() and \
+            (self.has_explosives() or self.has_bow() or self.has('Progressive Hookshot'))
+        as_child = self.is_child() and \
+            (self.has_explosives() or self.has_slingshot() or self.has('Boomerang'))
+        if age == 'child':
+            return as_child
+        elif age == 'adult':
+            return as_adult
+        elif age == 'both':
+            return as_child and as_adult
+        else:
+            return as_child or as_adult
+
 
     def has_projectile(self, age='either', adult_qualifier=None, child_qualifier=None):
         as_adult = self.has(adult_qualifier) and \
@@ -351,8 +365,8 @@ class State(object):
 
     def has_shield(self, adult_qualifier=None, child_qualifier=None):
         #The mirror shield does not count as it cannot reflect deku scrub attack
-        return self.has(adult_qualifier) and self.has('Buy Hylian Shield') or \
-        self.has(child_qualifier) and self.has('Buy Deku Shield')
+        return self.has(adult_qualifier) and self.is_adult() and self.has('Buy Hylian Shield') or \
+        self.has(child_qualifier) and self.is_child() and self.has('Buy Deku Shield')
 
     def heart_count(self):
         # Warning: This only considers items that are marked as advancement items
@@ -365,11 +379,11 @@ class State(object):
 
     def has_fire_source(self, adult_qualifier=None):
         return self.can_use('Dins Fire') or \
-               self.has(adult_qualifier) and self.can_use('Fire Arrows')
+               self.has(adult_qualifier) and self.is_adult() and self.can_use('Fire Arrows')
 
     def has_fire_source_with_torch(self, adult_qualifier=None, child_qualifier=None):
         return self.has_fire_source(adult_qualifier) or \
-               self.has(child_qualifier) and self.has_sticks()
+               self.has(child_qualifier) and self.is_child() and self.has_sticks()
 
     def guarantee_hint(self):
         if(self.world.hints == 'mask'):
