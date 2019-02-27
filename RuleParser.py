@@ -8,6 +8,8 @@ escaped_items = {}
 for item in item_table:
     escaped_items[re.sub(r'[\'()[\]]', '', item.replace(' ', '_'))] = item
 
+lambda_methods = ['as_either', 'as_child', 'as_adult']
+
 
 class Rule_AST_Transformer(ast.NodeTransformer):
 
@@ -84,6 +86,15 @@ class Rule_AST_Transformer(ast.NodeTransformer):
 
 
     def visit_Call(self, node):
+        if node.func.id in lambda_methods:
+            node.args = [ast.Lambda(
+                            args=ast.arguments(
+                                args=[ast.arg(arg='state')],
+                                defaults=[],
+                                kwonlyargs=[], 
+                                kw_defaults=[]),
+                            body=node.args[0])]
+
         new_args = []
         for child in node.args:
             if isinstance(child, ast.Name):
@@ -99,6 +110,8 @@ class Rule_AST_Transformer(ast.NodeTransformer):
                     child = ast.Str(escaped_items[child.id])
                 else:
                     child = ast.Str(child.id.replace('_', ' '))
+            else:
+                self.visit(child)
             new_args.append(child)
 
         if isinstance(node.func, ast.Name):

@@ -7,7 +7,7 @@ class Entrance(object):
         self.target = None
         self.addresses = None
         self.spot_type = 'Entrance'
-        self.recursion_count = 0
+        self.recursion_count = { 'child': 0, 'adult': 0 }
         self.vanilla = None
         self.access_rule = lambda state: True
 
@@ -24,11 +24,14 @@ class Entrance(object):
         return new_entrace
 
 
-    def can_reach(self, state):
-        if self.access_rule(state) and state.can_reach(self.parent_region):
-            return True
+    def can_reach(self, state, age='either'):
+        if age == 'either':
+            return state.can_reach(self, age='adult') or \
+                    state.can_reach(self, age='child')
 
-        return False
+        elif age == 'child' or age == 'adult':
+            return state.as_age(self.access_rule, age=age, spot=self) and \
+                    state.can_reach(self.parent_region, age=age)
 
 
     def connect(self, region, addresses=None, target=None, vanilla=None):

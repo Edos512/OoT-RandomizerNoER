@@ -27,7 +27,7 @@ class Region(object):
         self.dungeon = None
         self.world = None
         self.spot_type = 'Region'
-        self.recursion_count = 0
+        self.recursion_count = { 'child': 0, 'adult': 0 }
         self.price = None
         self.world = None
 
@@ -47,10 +47,16 @@ class Region(object):
         return new_region
 
 
-    def can_reach(self, state):
-        for entrance in self.entrances:
-            if entrance.can_reach(state):
-                return True
+    def can_reach(self, state, age='either'):
+        if age == 'either':
+            return state.can_reach(self, age='adult') or \
+                    state.can_reach(self, age='child')
+
+        elif age == 'child' or age == 'adult':
+            for entrance in self.entrances:
+                if entrance.can_reach(state, age=age):
+                    return True
+
         return False
 
 

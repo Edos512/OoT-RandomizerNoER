@@ -7,14 +7,17 @@ class State(object):
     def __init__(self, parent):
         self.prog_items = Counter()
         self.world = parent
-        self.region_cache = {}
-        self.recursion_count = 0
+        self.region_cache = { 'child': {}, 'adult': {} }
+        self.recursion_count = { 'child': 0, 'adult': 0 }
         self.collected_locations = {}
+        self.current_spot = None
+        self.adult = False
 
 
     def clear_cached_unreachable(self):
         # we only need to invalidate results which were False, places we could reach before we can still reach after adding more items
-        self.region_cache = {k: v for k, v in self.region_cache.items() if v}
+        for cache_type in self.region_cache:
+            self.region_cache[cache_type] = {k: v for k, v in self.region_cache[cache_type].items() if v}
 
 
     def clear_cache(self):
@@ -28,16 +31,23 @@ class State(object):
             new_world = self.world
         new_state = State(new_world)
         new_state.prog_items = copy.copy(self.prog_items)
-        new_state.region_cache = copy.copy(self.region_cache)
+        new_state.region_cache = {k: copy.copy(v) for k,v in self.region_cache.items()}
         new_state.collected_locations = copy.copy(self.collected_locations)
         return new_state
 
 
-    def can_reach(self, spot, resolution_hint=None):
+    def can_reach(self, spot, resolution_hint=None, age='either'):
+        if age == 'either':
+            return self.can_reach(spot, resolution_hint, age='adult') or \
+                    self.can_reach(spot, resolution_hint, age='child')
+
+        if age == 'adult' and not self.can_become_adult():
+            return False
+
         try:
             spot_type = spot.spot_type
             if spot_type == 'Location' or spot_type == 'Entrance':
-                return spot.can_reach(self)
+                return spot.can_reach(self, age=age)
             elif spot_type == 'Region':
                 correct_cache = self.region_cache
             else:
@@ -46,37 +56,77 @@ class State(object):
             # try to resolve a name
             if resolution_hint == 'Location':
                 spot = self.world.get_location(spot)
-                return spot.can_reach(self)
+                return spot.can_reach(self, age=age)
             elif resolution_hint == 'Entrance':
                 spot = self.world.get_entrance(spot)
-                return spot.can_reach(self)
+                return spot.can_reach(self, age=age)
             else:
                 # default to Region
                 spot = self.world.get_region(spot)
                 correct_cache = self.region_cache
 
-        if spot.recursion_count > 0:
+        if spot.recursion_count[age] > 0:
             return False
 
-        if spot not in correct_cache:
+        if spot not in correct_cache[age]:
             # for the purpose of evaluating results, recursion is resolved by always denying recursive access (as that ia what we are trying to figure out right now in the first place
-            spot.recursion_count += 1
-            self.recursion_count += 1
+            spot.recursion_count[age] += 1
+            self.recursion_count[age] += 1
 
-            can_reach = spot.can_reach(self)
+            can_reach = spot.can_reach(self, age=age)
 
-            spot.recursion_count -= 1
-            self.recursion_count -= 1
+            spot.recursion_count[age] -= 1
+            self.recursion_count[age] -= 1
 
             # we only store qualified false results (i.e. ones not inside a hypothetical)
             if not can_reach:
-                if self.recursion_count == 0:
-                    correct_cache[spot] = can_reach
+                if self.recursion_count[age] == 0:
+                    correct_cache[age][spot] = can_reach
             else:
-                correct_cache[spot] = can_reach
+                correct_cache[age][spot] = can_reach
             return can_reach
+            
+        return correct_cache[age][spot]
 
-        return correct_cache[spot]
+
+    def as_either(self, access_rule):
+        return self.as_adult(access_rule) or self.as_child(access_rule)
+
+
+    def as_adult(self, access_rule):
+        if self.adult:
+            return access_rule(self)
+        else:
+            return self.as_age(access_rule, age='adult') and \
+                    self.can_reach(self.current_spot.parent_region, age='adult')
+
+
+    def as_child(self, access_rule):
+        if not self.adult:
+            return access_rule(self)
+        else:
+            return self.as_age(access_rule, age='child') and \
+                    self.can_reach(self.current_spot.parent_region, age='child')
+
+
+    def as_age(self, access_rule, age, spot=None):
+        original_adult = self.adult
+        self.adult = (age == 'adult')
+
+        if spot is not None:
+            original_spot = self.current_spot
+            self.current_spot = spot
+
+        access_rule_result = access_rule(self)
+
+        # We must set the state adult flag back to what it was originally in case we are in a nested access_rule
+        self.adult = original_adult
+
+        if spot is not None:
+            # For similar reasons, we must set the current spot flag to what it was originally
+            self.current_spot = original_spot
+
+        return access_rule_result
 
 
     def item_name(self, location):
@@ -101,8 +151,16 @@ class State(object):
         return self.prog_items[item]
 
 
-    def is_adult(self):
+    def can_become_adult(self):
         return self.has('Master Sword')
+
+
+    def is_adult(self):
+        return self.adult
+    
+
+    def is_child(self):
+        return not self.adult
 
 
     def can_child_attack(self):
@@ -252,12 +310,12 @@ class State(object):
 
 
     def has_bottle(self):
-        is_normal_bottle = lambda item: (item.startswith('Bottle') and item != 'Bottle with Letter' and (item != 'Bottle with Big Poe' or self.is_adult()))
-        return self.has_any(is_normal_bottle)
+        is_normal_bottle = lambda item: (item.startswith('Bottle') and item != 'Bottle with Letter' and (item != 'Bottle with Big Poe' or self.can_reach('Castle Town Rupee Room', 'Region', age='adult')))
+        return any(is_normal_bottle(pritem) for pritem in self.prog_items)
 
 
     def bottle_count(self):
-        return sum([pritem for pritem in self.prog_items if pritem.startswith('Bottle') and pritem != 'Bottle with Letter' and (pritem != 'Bottle with Big Poe' or self.is_adult())])
+        return sum([pritem for pritem in self.prog_items if pritem.startswith('Bottle') and pritem != 'Bottle with Letter' and (pritem != 'Bottle with Big Poe' or self.can_reach('Castle Town Rupee Room', 'Region', age='adult'))])
 
 
     def has_hearts(self, count):
@@ -333,8 +391,10 @@ class State(object):
                 del self.prog_items[item.name]
 
             # invalidate collected cache. unreachable regions are still unreachable
-            self.region_cache =   {k: v for k, v in self.region_cache.items() if not v}
-            self.recursion_count = 0
+            for cache_type in self.region_cache:
+                self.region_cache[cache_type] = {k: v for k, v in self.region_cache[cache_type].items() if not v}
+                
+            self.recursion_count = {k: 0 for k in self.recursion_count}
 
 
     def __getstate__(self):
