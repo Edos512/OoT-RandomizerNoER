@@ -217,14 +217,19 @@ class State(object):
 
     def can_use(self, item):
         magic_items = ['Dins Fire', 'Farores Wind', 'Nayrus Love', 'Lens of Truth']
-        adult_items = ['Bow', 'Hammer', 'Iron Boots', 'Hover Boots', 'Magic Bean']
+        adult_items = ['Bow', 'Hammer', 'Iron Boots', 'Hover Boots', 'Epona']
+        child_items = ['Slingshot', 'Boomerang', 'Kokiri Sword']
         magic_arrows = ['Fire Arrows', 'Light Arrows']
         if item in magic_items:
             return self.has(item) and self.has('Magic Meter')
+        elif item in child_items:
+            return self.has(item) and self.is_child()
         elif item in adult_items:
             return self.has(item) and self.is_adult()
         elif item in magic_arrows:
             return self.has(item) and self.is_adult() and self.has_bow() and self.has('Magic Meter')
+        elif item == 'Sticks':
+            return self.has_sticks() and self.is_child()
         elif item == 'Hookshot':
             return self.has('Progressive Hookshot') and self.is_adult()
         elif item == 'Longshot':
@@ -237,6 +242,8 @@ class State(object):
             return self.has('Progressive Hookshot') and self.is_adult() and self.has_ocarina()
         elif item == 'Distant Scarecrow':
             return self.has('Progressive Hookshot', 2) and self.is_adult() and self.has_ocarina()
+        elif item == 'Magic Bean':
+            return self.as_child(lambda state: state.has('Magic Bean')) and self.is_adult()
         else:
             return self.has(item)
 
@@ -280,6 +287,16 @@ class State(object):
         return ((self.has('Magic Meter') and self.has('Lens of Truth')) or self.world.logic_lens != 'all')
 
 
+    def can_spawn_softsoil_skull(self):
+        return self.is_child() and self.has_bugs()
+
+
+    def has_bugs(self):
+        return self.has_bottle() and \
+            (self.can_leave_forest() or self.has_sticks() or self.has('Kokiri Sword') or 
+             self.has('Boomerang') or self.has_explosives() or self.has('Buy_Bottle_Bug'))
+
+
     def has_projectile(self, age='either'):
         if age == 'child':
             return self.has_explosives() or self.has_slingshot() or self.has('Boomerang')
@@ -307,6 +324,11 @@ class State(object):
         zora_thawed = (self.can_play('Zeldas Lullaby') or (self.has('Hover Boots') and self.world.logic_zora_with_hovers)) and self.has_blue_fire()
         carpenter_access = self.can_reach('Gerudo Valley Far Side')
         return (self.has('Claim Check') or ((self.has('Progressive Strength Upgrade') or self.can_blast_or_smash() or self.has_bow() or self.world.logic_biggoron_bolero) and (((self.has('Eyedrops') or self.has('Eyeball Frog') or self.has('Prescription') or self.has('Broken Sword')) and zora_thawed) or ((self.has('Poachers Saw') or self.has('Odd Mushroom') or self.has('Cojiro') or self.has('Pocket Cucco') or self.has('Pocket Egg')) and zora_thawed and carpenter_access))))
+
+
+    def has_mask_of_truth(self):
+        # Must befriend Skull Kid to sell Skull Mask, all stones to spawn running man.
+        return self.has('Zeldas Letter') and self.can_play('Sarias Song') and self.has('Kokiri Emerald') and self.has('Goron Ruby') and self.has('Zora Sapphire')
 
 
     def has_bottle(self):
@@ -339,7 +361,7 @@ class State(object):
     def guarantee_hint(self):
         if(self.world.hints == 'mask'):
             # has the mask of truth
-            return self.has('Zeldas Letter') and self.can_play('Sarias Song') and self.has('Kokiri Emerald') and self.has('Goron Ruby') and self.has('Zora Sapphire')
+            return self.has_mask_of_truth()
         elif(self.world.hints == 'agony'):
             # has the Stone of Agony
             return self.has('Stone of Agony')
