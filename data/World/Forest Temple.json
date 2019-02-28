@@ -4,27 +4,16 @@
         "dungeon": "Forest Temple",
         "locations": {
             "Forest Temple First Chest": "True",
-            "Forest Temple Chest Behind Lobby": "Adult_Forest_Temple or Kokiri_Sword",
-            "GS Forest Temple First Room": "
-                can_use(Dins_Fire) or 
-                has_projectile(either, Adult_Forest_Temple, Child_Forest_Temple)",
-            "GS Forest Temple Lobby": "
-                (Adult_Forest_Temple and can_use(Hookshot)) or
-                (Child_Forest_Temple and can_use(Boomerang))"
+            "Forest Temple Chest Behind Lobby": "is_adult or Kokiri_Sword",
+            "GS Forest Temple First Room": "can_use(Dins_Fire) or has_projectile(either)",
+            "GS Forest Temple Lobby": "can_use(Hookshot) or can_use(Boomerang)"
         },
         "exits": {
-            #Child can get to the outdoors areas, but cannot complete any of the checks.
-            #Simplify logic definition by leaving the outdoors areas as adult only and
-            #connect child straight to the balcony on ability to kill the blue bubble.
-            #Note that child simply walks past the SoT block.
-            "Forest Temple Outdoors High Balconies": "
-                Child_Forest_Temple and
-                (has_explosives or
-                 ((can_use(Boomerang) or has_nuts or Buy_Deku_Shield) and
-                  (has_sticks or Kokiri_Sword or can_use(Slingshot))))",
-            "Forest Temple NW Outdoors": "Adult_Forest_Temple and can_play(Song_of_Time)",
-            "Forest Temple NE Outdoors": "Adult_Forest_Temple and can_use(Bow)",
-            "Forest Temple Block Push Room": "(Small_Key_Forest_Temple, 1)"
+            "Forest Temple NW Outdoors": "can_play(Song_of_Time) or is_child",
+            "Forest Temple NE Outdoors": "can_use(Bow) or can_use(Slingshot)",
+            "Forest Temple Block Push Room": "(Small_Key_Forest_Temple, 1)",
+            "Forest Temple Boss Region": "
+                as_adult(can_reach(Forest_Temple_Falling_Room) and can_use(Bow))"
         }
     },
     {
@@ -36,8 +25,11 @@
                 (can_use(Hookshot) and can_reach(Forest_Temple_Outside_Upper_Ledge))"
         },
         "exits": {
-            "Forest Temple NE Outdoors": "True",
-            "Forest Temple Outdoors High Balconies": "True"
+            "Forest Temple Outdoors High Balconies": "
+                is_adult or 
+                (has_explosives or$
+                 ((can_use(Boomerang) or has_nuts or Buy_Deku_Shield) and$
+                  (has_sticks or Kokiri_Sword or can_use(Slingshot))))"
         }
     },
     {
@@ -55,12 +47,10 @@
                  (can_use(Bow) or can_use(Dins_Fire) or has_explosives))"
         },
         "exits": {
-            "Forest Temple Outdoors High Balconies":"
+            "Forest Temple Outdoors High Balconies": "
                 can_use(Longshot) or (logic_forest_vines and can_use(Hookshot))",
                 #Longshot can grab some very high up vines to drain the well.
-            "Forest Temple NW Outdoors": "
-                can_use(Iron_Boots) or can_use(Longshot) or (Progressive_Scale, 2) or 
-                (logic_forest_vines and can_use(Hookshot))",
+            "Forest Temple NW Outside Region": "can_use(Iron_Boots) or (Progressive_Scale, 2)",
             "Forest Temple Lobby": "True",
             "Forest Temple Falling Room": "False" #For some reason you can't actually activate this from below. Cool game.
         }
@@ -71,6 +61,10 @@
         "locations": {
             "Forest Temple Well Chest": "True",
             "Forest Temple Map Chest": "True"
+        },
+        "exits": {
+            "Forest Temple NW Outdoors": "True",
+            "Forest Temple NE Outdoors": "True"
         }
     },
     {
@@ -80,25 +74,22 @@
             "Forest Temple Falling Room Chest": "True"
         },
         "exits": {
-            "Forest Temple NE Outdoors": "True",
-            "Forest Temple Boss Region": "can_use(Bow)"
+            "Forest Temple NE Outdoors": "True"
         }
     },
     {
         "region_name": "Forest Temple Block Push Room",
         "dungeon": "Forest Temple",
         "locations": {
-            "Forest Temple Block Push Chest": "
-                (Adult_Forest_Temple and can_use(Bow)) or
-                (Child_Forest_Temple and can_use(Slingshot))"
+            "Forest Temple Block Push Chest": "can_use(Bow) or can_use(Slingshot)"
         },
         "exits": {
             #end of the road for child forest. No hovers and too short to climb push blocks
-            "Forest Temple Outside Upper Ledge": "Adult_Forest_Temple and can_use(Hover_Boots)",
+            "Forest Temple Outside Upper Ledge": "can_use(Hover_Boots)",
             "Forest Temple Bow Region": "
-                Progressive_Strength_Upgrade and (Small_Key_Forest_Temple, 3) and Adult_Forest_Temple",
+                Progressive_Strength_Upgrade and (Small_Key_Forest_Temple, 3) and is_adult",
             "Forest Temple Straightened Hall": "
-                Progressive_Strength_Upgrade and (Small_Key_Forest_Temple, 2) and can_use(Bow) and Adult_Forest_Temple"
+                Progressive_Strength_Upgrade and (Small_Key_Forest_Temple, 2) and can_use(Bow) and is_adult"
         }
     },
     {
@@ -141,9 +132,7 @@
             "Forest Temple Near Boss Chest": "True",
             "Phantom Ganon Heart": "Boss_Key_Forest_Temple",
             "Phantom Ganon": "Boss_Key_Forest_Temple",
-            "GS Forest Temple Basement": "
-                (Adult_Forest_Temple and can_use(Hookshot)) or
-                (Child_Forest_Temple and can_use(Boomerang))"
+            "GS Forest Temple Basement": "can_use(Hookshot)) or can_use(Boomerang)"
         }
     }
 ]

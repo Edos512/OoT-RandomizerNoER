@@ -332,7 +332,7 @@ class World(object):
             self._cached_locations = []
             for region in self.regions:
                 self._cached_locations.extend(region.locations)
-        return self._cached_locations
+        return sorted(self._cached_locations, key = lambda x : x.name)
 
 
     def get_unfilled_locations(self):
