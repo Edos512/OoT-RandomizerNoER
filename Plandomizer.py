@@ -20,10 +20,11 @@ from JSONDump import dump_obj, CollapseList, CollapseDict, AllignedDict, SortedD
 
 
 per_world_keys = (
+    'starting_items',
+    'item_pool',
     'dungeons',
     'trials',
-    'item_pool',
-    'starting_items',
+    ':entrances',
     'locations',
     ':woth_locations',
     ':barren_regions',
@@ -123,12 +124,28 @@ class LocationRecord(SimpleRecord({'item': None, 'player': None, 'price': None, 
 
     @staticmethod
     def from_item(item):
+        if item.world.settings.world_count > 1:
+            player = item.world.id + 1
+        else:
+            player = None if item.location is not None and item.world is item.location.world else (item.world.id + 1)
+
         return LocationRecord({
             'item': item.name,
-            'player': None if item.location is not None and item.world is item.location.world else (item.world.id + 1),
+            'player': player,
             'model': item.looks_like_item.name if item.looks_like_item is not None and item.location.has_preview() and can_cloak(item, item.looks_like_item) else None,
             'price': item.price,
         })
+
+
+class EntranceRecord(SimpleRecord({'target': None})):
+    def __init__(self, src_dict):
+        if isinstance(src_dict, str):
+            src_dict = {'target':src_dict}
+        super().__init__(src_dict)
+
+
+    def to_json(self):
+        return self.target
 
 
 class StarterRecord(SimpleRecord({'count': 1})):
@@ -174,6 +191,7 @@ class WorldDistribution(object):
             'trials': {name: TrialRecord(record) for (name, record) in src_dict.get('trials', {}).items()},
             'item_pool': {name: ItemPoolRecord(record) for (name, record) in src_dict.get('item_pool', {}).items()},
             'starting_items': {name: StarterRecord(record) for (name, record) in src_dict.get('starting_items', {}).items()},
+            'entrances': None,
             'locations': {name: [LocationRecord(rec) for rec in record] if is_pattern(name) else LocationRecord(record) for (name, record) in src_dict.get('locations', {}).items() if not is_output_only(name)},
             'woth_locations': None,
             'barren_regions': None,
@@ -202,6 +220,7 @@ class WorldDistribution(object):
             'dungeons': {name: record.to_json() for (name, record) in self.dungeons.items()},
             'trials': {name: record.to_json() for (name, record) in self.trials.items()},
             'item_pool': SortedDict({name: record.to_json() for (name, record) in self.item_pool.items()}),
+            ':entrances': None if self.entrances is None else {name: record.to_json() for (name, record) in self.entrances.items()},
             'locations': {name: [rec.to_json() for rec in record] if is_pattern(name) else record.to_json() for (name, record) in self.locations.items()},
             ':woth_locations': None if self.woth_locations is None else {name: record.to_json() for (name, record) in self.woth_locations.items()},
             ':barren_regions': self.barren_regions,
@@ -521,14 +540,6 @@ class Distribution(object):
         }
 
         if spoiler:
-            if self.playthrough is not None:
-                self_dict[':playthrough'] = AllignedDict({
-                    sphere_nr: {
-                        name: record.to_json() for name, record in sphere.items()
-                    }
-                    for (sphere_nr, sphere) in self.playthrough.items()
-                }, depth=2)
-
             world_dist_dicts = [world_dist.to_json() for world_dist in self.world_dists]
             if self.settings.world_count > 1:
                 for k in per_world_keys:
@@ -537,6 +548,14 @@ class Distribution(object):
                         self_dict[k]['World %d' % (id + 1)] = world_dist_dict[k]
             else:
                 self_dict.update({k: world_dist_dicts[0][k] for k in per_world_keys})
+
+            if self.playthrough is not None:
+                self_dict[':playthrough'] = AllignedDict({
+                    sphere_nr: {
+                        name: record.to_json() for name, record in sphere.items()
+                    }
+                    for (sphere_nr, sphere) in self.playthrough.items()
+                }, depth=2)
 
         if not include_output:
             strip_output_only(self_dict)
@@ -563,6 +582,7 @@ class Distribution(object):
             world_dist = self.world_dists[world.id]
             world_dist.dungeons = {dung: DungeonRecord({ 'mq': world.dungeon_mq[dung] }) for dung in world.dungeon_mq}
             world_dist.trials = {trial: TrialRecord({ 'active': not world.skipped_trials[trial] }) for trial in world.skipped_trials}
+            world_dist.entrances = {ent: EntranceRecord(target) for (ent, target) in spoiler.entrances[world.id].items()}
             world_dist.locations = {loc: LocationRecord.from_item(item) for (loc, item) in spoiler.locations[world.id].items()}
             world_dist.woth_locations = {loc.name: LocationRecord.from_item(loc.item) for loc in spoiler.required_locations[world.id]}
             world_dist.barren_regions = [*world.empty_areas]

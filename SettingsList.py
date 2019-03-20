@@ -1,7 +1,7 @@
 import argparse
 import re
 import math
-from Cosmetics import get_tunic_color_options, get_navi_color_options, get_sword_color_options
+from Cosmetics import get_tunic_color_options, get_navi_color_options, get_sword_color_options, get_gauntlet_color_options, get_magic_color_options, get_heart_color_options
 from Location import LocationIterator
 import Sounds as sfx
 
@@ -50,17 +50,8 @@ class Setting_Info():
         elif self.type == list:
             self.default = []
 
-        if 'randomize_key' in gui_params:
-            # initialize random choice distribution if not set
-            if 'distribution' not in gui_params:
-                self.gui_params['distribution'] = [(choice, 1) for choice in self.choice_list]
-
-            # add dependency for randomize option
-            if self.dependency:
-                old_dependency = dependency
-                self.dependency = lambda settings: self.default if settings.__dict__[self.gui_params['randomize_key']] else old_dependency(settings)
-            else:
-                self.dependency = lambda settings: self.default if settings.__dict__[self.gui_params['randomize_key']] else None
+        if 'distribution' not in gui_params:
+            self.gui_params['distribution'] = [(choice, 1) for choice in self.choice_list]
 
 
 
@@ -166,16 +157,6 @@ logic_tricks = {
         'tooltip' : '''\
                     Use the bombflower on the stairs or near Medigoron.
                     Timing is tight, especially without backwalking
-                    '''},
-    'Morpha with Gold Scale': {
-        'name'    : 'logic_morpha_with_scale',
-        'tooltip' : '''\
-                    Allows entering Water Temple and beating
-                    Morpha with Gold Scale instead of Iron Boots.
-                    Only applicable for keysanity and keysy due
-                    to the logic always seeing every chest in
-                    Water Temple that could contain the Boss Key
-                    as requiring Iron Boots.
                     '''},
     'Fewer Tunic Requirements': {
         'name'    : 'logic_fewer_tunic_requirements',
@@ -619,6 +600,8 @@ setting_infos = [
             When this option is off, the Kokiri Sword and
             Slingshot are always available somewhere
             in the forest.
+
+            This is incompatible with start as adult.
         ''',
         default        = True,
         shared         = True,
@@ -663,6 +646,23 @@ setting_infos = [
         gui_tooltip    = '''\
             King Zora starts out as moved. This also removes
             Ruto's Letter from the item pool.
+        ''',
+        shared         = True,
+        gui_params     = {
+            'randomize_key': 'randomize_settings',
+        },
+    ),
+    Checkbutton(
+        name           = 'child_lake_hylia_control',
+        gui_text       = 'Child May Drain Lake Hylia',
+        gui_group      = 'open',
+        gui_tooltip    = '''\
+            The switch to drain Lake Hylia after defeating morpha is
+            enabled for child (in addition to adult).
+
+            This option gives another dungeon entrance available to
+            child for Entrance Randomizer and adds more items
+            potentially accessible from completing Water Temple.
         ''',
         shared         = True,
         gui_params     = {
@@ -863,6 +863,7 @@ setting_infos = [
             Ganondorf and Ganon will be skipped.
         ''',
         shared         = True,
+        dependency     = lambda settings: True if settings.entrance_shuffle == 'indoors' else None,
     ),
     Checkbutton(
         name           = 'no_guard_stealth',
@@ -1081,6 +1082,59 @@ setting_infos = [
         shared         = True,
         gui_params     = {
             'randomize_key': 'randomize_settings',
+        },
+    ),
+    Combobox(
+        name           = 'entrance_shuffle',
+        default        = 'off',
+        choices        = {
+            'off':       'Off',
+            'dungeons':  'Dungeons Only',
+            'indoors':   'All Indoors',
+        },
+        gui_text       = 'Entrance Shuffle',
+        gui_group      = 'shuffle',
+        gui_tooltip    = '''\
+            Shuffle entrances bidirectionally within different pools.
+
+            'Dungeons Only':
+            Shuffle dungeon entrances with each other, including Bottom 
+            of the Well, Ice Cavern, and Gerudo Training Grounds. 
+            However, Ganon's Castle is not shuffled.
+
+            Additionally, the entrances of Deku Tree, Fire Temple and 
+            Bottom of the Well are opened for both adult and child to 
+            improve randomization, and accessing the Fire Temple from 
+            Bolero is always in logic for child regardless of Tunic settings.
+
+            Blue warps will return link to the new dungeons entrance. 
+            Lake Hylia will be filled for adult after defeating Morpha.
+
+            Master Quest dungeons are not supported yet, coming soon!
+
+            'All Indoors':
+            Shuffle dungeon entrances along with grotto and interior 
+            entrances as described below. All entrances are still only 
+            shuffled within their own pool. This means, for example, 
+            that dungeons are only shuffled with other dungeons.
+
+            Grottos: All grottos in the game including small Fairy Fountains 
+            and the Lost Woods Stage.
+
+            Interiors: All Houses and Great Fairies in the game.
+            For now, this excludes Richard's house, the Windmill, the 
+            Kakariko Potion Shop, Link's House and Temple of Time.
+            Adult trade quest timers are disabled when shuffling this pool,
+            and it forces Skip Tower Escape Sequence to be enabled for now.
+        ''',
+        shared         = True,
+        gui_params     = {
+            'randomize_key': 'randomize_settings',
+            'distribution':  [
+                ('off', 2),
+                ('dungeons', 1),
+                ('indoors', 1),
+            ],
         },
     ),
     Combobox(
@@ -1345,6 +1399,7 @@ setting_infos = [
             If set, a random number of dungeons
             will have Master Quest designs.
         ''',
+        dependency     = lambda settings: False if settings.entrance_shuffle != 'off' else None,
         shared         = True,
         gui_params     = {
             'randomize_key': 'randomize_settings',
@@ -1372,7 +1427,7 @@ setting_infos = [
             12: All dungeons will have
             Master Quest redesigns.
             ''',
-        dependency     = lambda settings: 0 if settings.mq_dungeons_random else None,
+        dependency     = lambda settings: 0 if settings.mq_dungeons_random or settings.entrance_shuffle != 'off' else None,
         shared         = True,
         gui_params     = {
             'randomize_key': 'randomize_settings',
@@ -1559,13 +1614,12 @@ setting_infos = [
         gui_group      = 'other',
         gui_tooltip    = '''\
             Useless has nothing but junk hints.
-            Strong distribution has some
-            duplicate hints and no junk hints.
-            Very Strong distribution has
-            only very useful hints.
-            Tournament distribution is
-            similar to Strong but with no
-            variation in hint types.
+            Strong distribution has a good
+            spread of different hint types.
+            Multiworld distribution has only
+            a few specific, useful hint types.
+            Tournament distribution has a set
+            number of hints for each type.
         ''',
         shared         = True,
     ),
@@ -1689,6 +1743,28 @@ setting_infos = [
             The alternatives are multiples of 3 hours.
         ''',
         shared         = True,
+    ),
+    Combobox(
+        name           = 'starting_age',
+        default        = 'child',
+        choices        = {
+            'child':  'Child',
+            'adult':  'Adult',
+            'random': 'Random',
+        },
+        gui_text       = 'Starting Age',
+        gui_group      = 'other',
+        gui_tooltip    = '''\
+            Choose which age Link will start as.
+
+            Starting as adult means you start with
+            the master sword in your inventory.
+
+            Only the child option is compatible with
+            Closed Forest.
+        ''',
+        shared         = True,
+        dependency     = lambda settings: 'child' if not settings.open_forest else None,
     ),
     Combobox(
         name           = 'default_targeting',
@@ -1900,11 +1976,85 @@ setting_infos = [
             'group':  'sword_trails',
             'widget': 'Combobox',
             'tooltip':'''\
+                      'Random Choice': Choose a random
+                      color from this list of colors.
+                      'Completely Random': Choose a random
+                      color from any color the N64 can draw.
+                      'Rainbow': Rainbow sword trails.
+            '''
+        }
+    ),
+    Setting_Info(
+        name           = 'silver_gauntlets_color',
+        type           = str,
+        shared         = False,
+        choices        = get_gauntlet_color_options(),
+        default        = 'Silver',
+        gui_params     = {
+            'text':   'Silver Gauntlets Color',
+            'group':  'gauntlet_colors',
+            'widget': 'Combobox',
+            'tooltip': '''\
                 'Random Choice': Choose a random
                 color from this list of colors.
                 'Completely Random': Choose a random
                 color from any color the N64 can draw.
                 'Rainbow': Rainbow sword trails.
+            '''
+        },
+    ),
+    Setting_Info(
+        name           = 'golden_gauntlets_color',
+        type           = str,
+        shared         = False,
+        choices        = get_gauntlet_color_options(),
+        default        = 'Gold',
+        gui_params={
+            'text':   'Golden Gauntlets Color',
+            'group':  'gauntlet_colors',
+            'widget': 'Combobox',
+            'tooltip': '''\
+                'Random Choice': Choose a random
+                color from this list of colors.
+                'Completely Random': Choose a random
+                color from any color the N64 can draw.
+                'Rainbow': Rainbow sword trails.
+            '''
+        },
+    ),
+    Setting_Info(
+        name           = 'heart_color',
+        type           = str,
+        shared         = False,
+        choices        = get_heart_color_options(),
+        default        = 'Red',
+        gui_params     = {
+            'text':   'Heart Color',
+            'group':  'ui_colors',
+            'widget': 'Combobox',
+            'tooltip': '''\
+                'Random Choice': Choose a random
+                color from this list of colors.
+                'Completely Random': Choose a random
+                color from any color the N64 can draw.
+            '''
+        },
+    ),
+    Setting_Info(
+        name           = 'magic_color',
+        type           = str,
+        shared         = False,
+        choices        = get_magic_color_options(),
+        default        = 'Green',
+        gui_params     = {
+            'text':   'Magic Color',
+            'group':  'ui_colors',
+            'widget': 'Combobox',
+            'tooltip': '''\
+                'Random Choice': Choose a random
+                color from this list of colors.
+                'Completely Random': Choose a random
+                color from any color the N64 can draw.
             '''
         },
     ),

@@ -214,7 +214,7 @@ normal_bottles = [
     'Bottle with Big Poe',
     'Bottle with Blue Fire']
 
-normal_bottle_count = 3
+bottle_count = 4
 
 
 normal_rupees = (
@@ -481,14 +481,22 @@ tradeitemoptions = (
 eventlocations = {
     'Ganon': 'Triforce',
     'Zeldas Letter': 'Zeldas Letter',
+    'Pierre': 'Scarecrow Song',
     'Magic Bean Salesman': 'Magic Bean',
-    'King Zora Moves': 'Bottle',
+    'Deliver Ruto\'s Letter': 'Deliver Letter',
+    "Sell 1 Big Poe": 'Sell Big Poe',
+    "Sell 2 Big Poe": 'Sell Big Poe',
+    "Sell 3 Big Poe": 'Sell Big Poe',
+    "Sell 4 Big Poe": 'Sell Big Poe',
     'Master Sword Pedestal': 'Master Sword',
     'Epona': 'Epona',
     'Deku Baba Sticks': 'Deku Stick Drop',
+    'Forest Temple Deku Baba Sticks': 'Deku Stick Drop',
     'Goron City Stick Pot': 'Deku Stick Drop',
     'Zoras Domain Stick Pot': 'Deku Stick Drop',
     'Deku Baba Nuts': 'Deku Nut Drop',
+    'Forest Temple Deku Baba Nuts': 'Deku Nut Drop',
+    'Dampes Grave Nut Pot': 'Deku Nut Drop',
     'Zoras Domain Nut Pot': 'Deku Nut Drop',
     'Gerudo Fortress Carpenter Rescue': 'Carpenter Rescue',
     'Haunted Wasteland Bombchu Salesman': 'Bombchus',
@@ -615,11 +623,11 @@ def get_pool_core(world):
     else:
         placed_items['Kokiri Sword Chest'] = 'Kokiri Sword'
 
+    ruto_bottles = 1
     if world.open_fountain:
-        bottle = random.choice(normal_bottles)
-        pool.append(bottle)
-    else:
-        pool.append('Bottle with Letter')
+        ruto_bottles = 0
+    elif world.item_pool_value == 'plentiful':
+        ruto_bottles += 1
 
     if world.shuffle_weird_egg:
         pool.append('Weird Egg')
@@ -966,9 +974,12 @@ def get_pool_core(world):
     else:
         pool.extend(GC_vanilla)
 
-    for _ in range(normal_bottle_count):
-        bottle = random.choice(normal_bottles)
-        pool.append(bottle)
+    for i in range(bottle_count):
+        if i >= ruto_bottles:
+            bottle = random.choice(normal_bottles)
+            pool.append(bottle)
+        else:
+            pool.append('Bottle with Letter')
 
     earliest_trade = tradeitemoptions.index(world.logic_earliest_adult_trade)
     latest_trade = tradeitemoptions.index(world.logic_latest_adult_trade)
@@ -987,6 +998,9 @@ def get_pool_core(world):
         world.state.collect(ItemFactory('Serenade of Water'))
         world.state.collect(ItemFactory('Farores Wind'))
         pool.extend(get_junk_item(3))
+        
+    if world.free_scarecrow:
+        world.state.collect(ItemFactory('Scarecrow Song'))
 
     if world.shuffle_mapcompass == 'remove' or world.shuffle_mapcompass == 'startwith':
         for item in [item for dungeon in world.dungeons for item in dungeon.dungeon_items]:
@@ -1030,7 +1044,7 @@ def get_pool_core(world):
     # Make sure our pending_junk_pool is empty. If not, remove some random junk here.
     if pending_junk_pool:
         remove_junk_pool, _ = zip(*junk_pool_base)
-        remove_junk_pool.extend(['Recovery Heart', 'Bombs (20)', 'Arrows (30)', 'Ice Trap'])
+        remove_junk_pool = list(remove_junk_pool) + ['Recovery Heart', 'Bombs (20)', 'Arrows (30)', 'Ice Trap']
 
         junk_candidates = [item for item in pool if item in remove_junk_pool]
         for pending_item in pending_junk_pool:
