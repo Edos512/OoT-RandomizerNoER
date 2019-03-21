@@ -554,16 +554,16 @@ class State(object):
     def can_finish_GerudoFortress(self):
         if self.world.gerudo_fortress == 'normal':
             return (self.has('Small Key (Gerudo Fortress)', 4) and
+                    (self.is_adult() or self.has('Kokiri Sword')) and
                     (self.can_use('Bow')
                         or self.can_use('Hookshot')
                         or self.can_use('Hover Boots')
                         or self.world.logic_gerudo_kitchen
                         or self.is_glitched))
         elif self.world.gerudo_fortress == 'fast':
-            return (self.has('Small Key (Gerudo Fortress)', 1) and
-                    (self.is_adult() or self.is_glitched))
+            return self.has('Small Key (Gerudo Fortress)', 1)
         else:
-            return self.is_adult() or self.is_glitched
+            return True
 
 
     def can_shield(self):

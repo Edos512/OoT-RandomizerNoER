@@ -327,7 +327,7 @@
                 is_child or Epona or can_use(Longshot) or
                 gerudo_fortress == 'open' or Carpenter_Rescue",
             "Gerudo Fortress": "True",
-            "Carpenter Tent": "is_adult",
+            "Carpenter Tent": "is_adult", # Invisible as child so not in logic
             "Gerudo Valley Storms Grotto": "is_adult and can_play(Song_of_Storms)" # Not there as child
         }
     },
@@ -344,22 +344,24 @@
                 Carpenter_Rescue and Epona and Bow and is_adult",
             "Horseback Archery 1500 Points": "
                 Carpenter_Rescue and Epona and Bow and is_adult",
-            "Gerudo Fortress North F1 Carpenter": "True",
+            "Gerudo Fortress North F1 Carpenter": "is_adult or Kokiri_Sword",
             "Gerudo Fortress North F2 Carpenter": "
-                can_use(Bow) or can_use(Hookshot) or can_use(Hover_Boots) or logic_gerudo_kitchen",
-            "Gerudo Fortress South F1 Carpenter": "True",
-            "Gerudo Fortress South F2 Carpenter": "True",
+                (is_adult or Kokiri_Sword) and 
+                (can_use(Bow) or can_use(Hookshot) or can_use(Hover_Boots) or logic_gerudo_kitchen)",
+            "Gerudo Fortress South F1 Carpenter": "is_adult or Kokiri_Sword",
+            "Gerudo Fortress South F2 Carpenter": "is_adult or Kokiri_Sword",
             "Gerudo Fortress Carpenter Rescue": "can_finish_GerudoFortress",
             "Gerudo Fortress Membership Card": "can_finish_GerudoFortress",
             "GS Gerudo Fortress Archery Range": "
                 can_use(Hookshot) and Carpenter_Rescue and nighttime",
             "GS Gerudo Fortress Top Floor": "
-                nighttime and (Carpenter_Rescue or can_use(Bow) or can_use(Hookshot) or 
+                is_adult and nighttime and 
+                (Carpenter_Rescue or can_use(Bow) or can_use(Hookshot) or 
                     can_use(Hover_Boots) or logic_gerudo_kitchen)"
         },
         "exits": {
             "Gerudo Valley Far Side": "True",
-            "Gerudo Fortress Outside Gate": "Carpenter_Rescue",
+            "Gerudo Fortress Outside Gate": "as_adult_here(Carpenter_Rescue)",
             "Gerudo Training Grounds Lobby": "
                 Carpenter_Rescue and Gerudo_Membership_Card and is_adult",
             "Gerudo Fortress Storms Grotto": "is_adult and can_play(Song_of_Storms)" # Not there as child
@@ -385,7 +387,9 @@
         "hint": "Haunted Wasteland",
         "locations": {
             "Haunted Wasteland Structure Chest": "has_fire_source",
-            "Haunted Wasteland Bombchu Salesman": "Progressive_Wallet",
+            "Haunted Wasteland Bombchu Salesman": "
+                Progressive_Wallet and 
+                (is_adult or has_sticks or Kokiri_Sword)",
             "GS Wasteland Ruins": "can_use(Hookshot)"
         },
         "exits": {
