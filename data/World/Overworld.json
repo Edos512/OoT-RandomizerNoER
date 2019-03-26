@@ -245,7 +245,8 @@
             "Pierre": "has_ocarina and as_both_here and not free_scarecrow",
             "Underwater Bottle": "
                 is_child and
-                (can_dive or (as_adult(can_reach(Morpha, Location)) and child_lake_hylia_control))",
+                (can_dive or 
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
             "Lake Hylia Sun": "
                 is_adult and 
                 (can_use(Distant_Scarecrow) or can_reach(Morpha, Location)) and can_use(Bow)",
@@ -267,14 +268,15 @@
             "Hyrule Field": "True",
             "Zoras Domain": "
                 is_child and
-                (can_dive or (as_adult(can_reach(Morpha, Location)) and child_lake_hylia_control))",
+                (can_dive or 
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
             "Lake Hylia Lab": "True",
             "Fishing Hole": "
                 is_child or can_use(Scarecrow) or can_use(Magic_Bean) or can_reach(Morpha, Location)",
             "Water Temple Lobby": "
                 as_adult_here((can_use(Hookshot) and can_use(Iron_Boots)) or can_use(Longshot)) and
-                ((as_adult(can_reach(Morpha, Location)) and child_lake_hylia_control) or is_adult) and
-                ((Progressive_Scale, 2) or can_use(Iron_Boots))",
+                ((Progressive_Scale, 2) or can_use(Iron_Boots)) and
+                (is_adult or (child_lake_hylia_control and as_adult(can_reach(Morpha, Location))))",
             "Lake Hylia Grotto": "True"
         }
     },
