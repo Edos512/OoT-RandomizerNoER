@@ -48,7 +48,7 @@
             "Kokiri Shop": "True",
             "Outside Deku Tree": "(Kokiri_Sword and Buy_Deku_Shield) or is_adult or open_forest",
             "Lost Woods": "True",
-            "Lost Woods Bridge": "can_leave_forest",
+            "Lost Woods Bridge From Forest": "can_leave_forest",
             "Kokiri Forest Storms Grotto": "can_play(Song_of_Storms)"
         }
     },
@@ -190,11 +190,18 @@
         }
     },
     {
-        "region_name": "Lost Woods Bridge",
+        "region_name": "Lost Woods Bridge From Forest",
         "hint": "the Lost Woods",
         "locations": {
             "Gift from Saria": "True"
         },
+        "exits": {
+            "Lost Woods Bridge": "True"
+        }
+    },
+    {
+        "region_name": "Lost Woods Bridge",
+        "hint": "the Lost Woods",
         "exits": {
             "Kokiri Forest": "True",
             "Hyrule Field": "True"
@@ -216,7 +223,7 @@
             "Lake Hylia": "True",
             "Gerudo Valley": "True",
             "Castle Town Entrance": "True",
-            "Kakariko Village": "True",
+            "Kakariko Village From Field": "True",
             "Zora River Front": "True",
             "Lon Lon Ranch": "True",
             "Remote Southern Grotto": "as_either_here(can_blast_or_smash)",
@@ -662,6 +669,17 @@
         "region_name": "Castle Town Man in Green House"
     },
     {
+        "region_name": "Kakariko Village From Field",
+        "hint": "Kakariko Village",
+        "locations": {
+            "Sheik in Kakariko": "
+                is_adult and Forest_Medallion and Fire_Medallion and Water_Medallion"
+        },
+        "exits": {
+            "Kakariko Village": "True"
+        }
+    },
+    {
         "region_name": "Kakariko Village",
         "hint": "Kakariko Village",
         "locations": {
@@ -673,8 +691,6 @@
                             (damage_multiplier != 'ohko' or has_fairy or can_use(Nayrus_Love)))))",
             "Anju as Adult": "is_adult and at_day",
             "Anjus Chickens": "is_child and at_day",
-            "Sheik in Kakariko": "
-                is_adult and Forest_Medallion and Fire_Medallion and Water_Medallion",
             "GS Kakariko House Under Construction": "is_child and at_night",
             "GS Kakariko Skulltula House": "is_child and at_night",
             "GS Kakariko Guard's House": "is_child and at_night",
