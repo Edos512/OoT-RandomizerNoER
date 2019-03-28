@@ -510,11 +510,12 @@ class State(object):
         else:
             zora_thawed = self.can_reach('Zoras Domain', age='adult') and self.has_blue_fire()
             pocket_egg = self.has('Pocket Egg')
-            pocket_cucco = self.has('Pocket Cucco') or pocket_egg
+            pocket_cucco = self.has('Pocket Cucco') or (pocket_egg and self.can_reach_time('day'))
             cojiro = self.has('Cojiro') or (pocket_cucco and self.can_reach('Carpenter Boss House', age='adult'))
-            odd_mushroom = self.has('Odd Mushroom') or cojiro
-            odd_poultice = odd_mushroom and self.can_reach('Odd Medicine Building', age='adult')
-            poachers_saw = self.has('Poachers Saw') or odd_poultice
+            odd_mushroom = self.has('Odd Mushroom') or (cojiro and self.can_reach('Lost Woods', age='adult'))
+            odd_poutice = odd_mushroom and self.can_reach('Odd Medicine Building', age='adult') and self.can_reach('Lost Woods', age='adult')
+            poachers_saw = self.has('Poachers Saw') or (odd_poutice and self.can_reach('Goron City', age='adult') and 
+                                                        (self.can_blast_or_smash() or self.has('Progressive Strength Upgrade')))
             broken_sword = self.has('Broken Sword') or (poachers_saw and self.can_reach('Gerudo Valley Far Side', age='adult'))
             prescription = self.has('Prescription') or broken_sword
             eyeball_frog = (self.has('Eyeball Frog') or prescription) and zora_thawed
@@ -529,12 +530,14 @@ class State(object):
 
 
     def has_skull_mask(self):
-        return self.has('Zeldas Letter') and self.can_reach('Castle Town Mask Shop')
+        return self.has('Zeldas Letter') and self.can_reach('Kakariko Village', age='child') and self.can_reach('Castle Town Mask Shop')
 
 
     def has_mask_of_truth(self):
-        # Must befriend Skull Kid to sell Skull Mask, all stones to spawn running man.
-        return self.has_skull_mask() and self.can_play('Sarias Song') and self.has('Kokiri Emerald') and self.has('Goron Ruby') and self.has('Zora Sapphire')
+        # Must befriend Skull Kid to sell Skull Mask, all stones to spawn running man, and access to Lost Woods, Graveyard (at day time) and Hyrule Field as child
+        return (self.has_skull_mask() and self.can_reach('Lost Woods', age='child') and self.can_play('Sarias Song') and 
+                self.can_reach('Graveyard', age='child', tod='day') and self.can_reach('Hyrule Field', age='child') and 
+                self.has('Kokiri Emerald') and self.has('Goron Ruby') and self.has('Zora Sapphire'))
 
 
     def has_bottle(self):
