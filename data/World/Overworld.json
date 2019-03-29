@@ -82,7 +82,7 @@
         "region_name": "Links House",
         "hint": "Link's House",
         "locations": {
-            "Links House Cow": "is_adult and Epona"
+            "Links House Cow": "is_adult and can_play(Eponas_Song) and as_adult(can_reach(Lon_Lon_Ranch))"
         },
         "exits": {
             "Kokiri Forest": "True"
