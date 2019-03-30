@@ -24,7 +24,8 @@
                 is_adult or has_slingshot or has_sticks or 
                 has_explosives or Kokiri_Sword",
             "DC Deku Scrub Deku Shield": "True",
-            "Dodongos Cavern Gossip Stone": "True"
+            "Dodongos Cavern Gossip Stone": "True",
+            "Gossip Stone Fairy": "can_summon_gossip_fairy and has_bottle"
         },
         "exits": {
             "Dodongos Cavern Beginning": "True",

@@ -205,7 +205,8 @@ class Playthrough(object):
     # This function modifies provided state.
     def collect_locations(self, item_locations=None):
         # Get all item locations in the worlds that have progression items
-        item_locations = item_locations or [location for state in self.state_list for location in state.world.get_filled_locations() if location.item.advancement]
+        item_locations = item_locations or [location for state in self.state_list for location in state.world.get_filled_locations() 
+                                            if location.item.advancement and (location.item.type != 'Drop' or not state.has(location.item.name))]
         for location in self.iter_reachable_locations(item_locations):
             # Collect the item for the state world it is for
             self.collect(location.item)
