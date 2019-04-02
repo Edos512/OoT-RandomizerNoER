@@ -581,12 +581,15 @@ setting_infos = [
             in the forest.
 
             This is incompatible with start as adult.
+            This is also forced enabled when shuffling
+            "All Indoors" and/or "Overworld" entrances.
         ''',
         default        = True,
         shared         = True,
         gui_params     = {
             'randomize_key': 'randomize_settings',
         },
+        dependency     = lambda settings: True if settings.entrance_shuffle == 'all-indoors' or settings.entrance_shuffle == 'all' else None,
     ),
     Checkbutton(
         name           = 'open_kakariko',
@@ -845,7 +848,7 @@ setting_infos = [
             Ganondorf and Ganon will be skipped.
         ''',
         shared         = True,
-        dependency     = lambda settings: True if settings.entrance_shuffle == 'indoors' else None,
+        dependency     = lambda settings: True if settings.entrance_shuffle != 'off' and settings.entrance_shuffle != 'dungeons' else None,
     ),
     Checkbutton(
         name           = 'no_guard_stealth',
@@ -1115,9 +1118,11 @@ setting_infos = [
         gui_params     = {
             'randomize_key': 'randomize_settings',
             'distribution':  [
-                ('off', 2),
+                ('off', 4),
                 ('dungeons', 1),
-                ('indoors', 1),
+                ('simple-indoors', 1),
+                ('all-indoors', 1),
+                ('all', 1),
             ],
         },
         dependency     = lambda settings: 'off' if settings.logic_rules == 'glitched' else None,
