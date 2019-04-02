@@ -518,6 +518,17 @@ def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
                 if world.starting_age == 'adult' and not playthrough_with_time_travel.state_list[world.id].can_reach('Temple of Time', age='child'):
                     return (False, 'Links House to Temple of Time path as child')
 
+        # We consider that time of day must always be reachable as both ages without any items in the item pool
+        # We don't use any items yet to be placed to ensure the fill algorithm isn't forced to provide, for example, an Ocarina and Sun's Song very early
+        base_playthrough = Playthrough.max_explore([world.state for world in worlds])
+        for world in worlds:
+            base_playthrough.collect(ItemFactory('Time Travel', world=world))
+        base_playthrough.visit_locations()
+        for world in worlds:
+            if not (any(region for region in base_playthrough.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
+                    any(region for region in base_playthrough.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
+                return (False, 'Guaranteed time passing as both ages')
+
     return (True, None)
 
 

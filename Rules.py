@@ -12,8 +12,7 @@ def set_rules(world):
     world.get_location('Ganon').item_rule = lambda location, item: item.name == 'Triforce'
 
     # the root of the world graph is always considered reachable because the player can save&quit
-    # except if we are in a time of day check, in this case we need to ensure the tod could be reached somewhere in the world
-    world.get_region('Root').can_reach = lambda state: state.tod == None or state.can_reach_time(state.tod)
+    world.get_region('Root').can_reach = lambda state: True
 
     for location in world.get_locations():
 
