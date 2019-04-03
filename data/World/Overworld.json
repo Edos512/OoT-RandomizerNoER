@@ -30,7 +30,9 @@
             "Kokiri Sword Chest": "is_child",
             "GS Kokiri Know It All House": "
                 is_child and can_child_attack and
-                (had_night_start or can_leave_forest or can_play(Suns_Song))",
+                ((shuffle_overworld_entrances and at_night) or 
+                    (not shuffle_overworld_entrances and 
+                        (had_night_start or can_leave_forest or can_play(Suns_Song))))",
             "GS Kokiri Bean Patch": "
                 can_plant_bugs and can_child_attack",
             "GS Kokiri House of Twins": "
