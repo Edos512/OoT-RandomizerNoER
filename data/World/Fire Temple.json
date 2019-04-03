@@ -21,6 +21,7 @@
                 ((Small_Key_Fire_Temple, 8) or not keysanity) and can_use(Hammer)"
         },
         "exits": {
+            "Death Mountain Crater Central": "True",
             "Fire Temple Big Lava Room":"
                 (Small_Key_Fire_Temple, 2) and
                 (logic_fewer_tunic_requirements or can_use(Goron_Tunic))"
