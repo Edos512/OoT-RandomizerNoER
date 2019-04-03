@@ -235,6 +235,9 @@ entrance_shuffle_table = [
                         ('Zoras Domain -> Zora River Behind Waterfall',                     { 'index': 0x019D })),
     ('Overworld',       ('Zoras Domain Behind King Zora -> Zoras Fountain',                 { 'index': 0x0225 }),
                         ('Zoras Fountain -> Zoras Domain Behind King Zora',                 { 'index': 0x01A1 })),
+
+    ('OwlDrop',         ('Lake Hylia Owl Flight -> Hyrule Field',                           { 'index': 0x027E })),
+    ('OwlDrop',         ('Death Mountain Summit Owl Flight -> Kakariko Village',            { 'index': 0x0554 })),
 ]
 
 
@@ -278,6 +281,8 @@ def shuffle_random_entrances(worlds):
             overworld_entrance_pool = get_entrance_pool('Overworld')
             entrance_pools['Overworld'] = entrance_instances(world, overworld_entrance_pool)
             entrance_pools['Overworld'] += [entrance.reverse for entrance in entrance_pools['Overworld']]
+            owl_entrance_pool = get_entrance_pool('OwlDrop')
+            entrance_pools['OwlDrop'] = entrance_instances(world, owl_entrance_pool)
 
         if worlds[0].shuffle_dungeon_entrances:
             dungeon_entrance_pool = get_entrance_pool('Dungeon')
@@ -299,7 +304,12 @@ def shuffle_random_entrances(worlds):
         # Set the assumption that all entrances are reachable
         target_entrance_pools = {}
         for pool_type, entrance_pool in entrance_pools.items():
-            target_entrance_pools[pool_type] = assume_pool_reachable(world, entrance_pool)
+            if pool_type == 'OwlDrop':
+                # Temporarily set all owl drop entrances unreachable
+                for entrance in entrance_pool:
+                    entrance.access_rule = lambda state: False
+            else:
+                target_entrance_pools[pool_type] = assume_pool_reachable(world, entrance_pool)
 
         # Special interiors need to be handled specifically by placing them in reverse and among all interiors, including normal ones
         if 'SpecialInterior' in entrance_pools:
@@ -308,6 +318,17 @@ def shuffle_random_entrances(worlds):
 
         # Shuffle all entrances among the pools to shuffle
         for pool_type, entrance_pool in entrance_pools.items():
+            if pool_type == 'OwlDrop':
+                # Owl Drops are handled on their own, without actually using the entrance shuffling algorithm
+                owl_drop_entrances = entrance_pool + entrance_pools['Overworld']
+                for entrance in entrance_pool:
+                    entrance.access_rule = lambda state: True
+                    target_drop = random.choice(owl_drop_entrances)
+                    entrance.connect(target_drop.connected_region)
+                    entrance.replaces = target_drop.replaces
+                    logging.getLogger('').debug('Connected %s To %s [World %d]', entrance, entrance.connected_region, entrance.world.id)
+                continue
+
             if pool_type in ['SpecialInterior', 'Overworld', 'Dungeon']:
                 # Those pools contain entrances leading to regions that might open access to completely new areas
                 # Dungeons are among those because exiting Spirit Temple from the hands is in logic 
