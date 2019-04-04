@@ -16,6 +16,7 @@ def entrance_instances(world, entrance_pool):
     entrance_instances = []
     for type, forward_entrance, *return_entrance in entrance_pool:
         forward_entrance = set_shuffled_entrance(world, forward_entrance[0], forward_entrance[1], type)
+        forward_entrance.primary = True
         if return_entrance:
             return_entrance = return_entrance[0]
             return_entrance = set_shuffled_entrance(world, return_entrance[0], return_entrance[1], type)
@@ -281,7 +282,10 @@ def shuffle_random_entrances(worlds):
         if worlds[0].shuffle_overworld_entrances:
             overworld_entrance_pool = get_entrance_pool('Overworld')
             entrance_pools['Overworld'] = entrance_instances(world, overworld_entrance_pool)
-            entrance_pools['Overworld'] += [entrance.reverse for entrance in entrance_pools['Overworld']]
+            for entrance in entrance_pools['Overworld'].copy():
+                entrance.reverse.primary = True
+                entrance_pools['Overworld'].append(entrance.reverse)
+
             owl_entrance_pool = get_entrance_pool('OwlDrop')
             entrance_pools['OwlDrop'] = entrance_instances(world, owl_entrance_pool)
 
