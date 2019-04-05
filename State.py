@@ -244,20 +244,6 @@ class State(object):
         return False
 
 
-    def can_reach_time(self, tod):
-        # Check if any region could be reached that allows the player to get to the needed tod
-        # This is meant to handle situations where you could bypass normal reachability by warping from that region, keeping that time of day
-        if self.playthrough:
-            cache_type = 'adult_regions' if self.adult else 'child_regions'
-            for region in self.playthrough.cached_spheres[-1][cache_type]:
-                if self.can_change_time_to(region, tod):
-                    return True
-        for region in self.world.regions:
-            if self.can_reach(region) and self.can_change_time_to(region, tod):
-                return True
-        return False
-
-
     def ensure_tod_access(self):
         # Time of day only has to be ensured if we are shuffling certain entrances (e.g. interior & overworld), otherwise it's a waste of performance
         return self.world.shuffle_interior_entrances or self.world.shuffle_overworld_entrances
@@ -520,7 +506,7 @@ class State(object):
 
             zora_thawed = self.can_reach('Zoras Domain', age='adult') and self.has_blue_fire()
             pocket_egg = self.has('Pocket Egg')
-            pocket_cucco = self.has('Pocket Cucco') or (pocket_egg and self.can_reach_time('day'))
+            pocket_cucco = self.has('Pocket Cucco') or pocket_egg
             cojiro = self.has('Cojiro') or (pocket_cucco and self.can_reach('Carpenter Boss House', age='adult'))
             odd_mushroom = self.has('Odd Mushroom') or cojiro
             odd_poultice = odd_mushroom and self.can_reach('Odd Medicine Building', age='adult') and self.can_reach('Lost Woods', age='adult')

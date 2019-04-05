@@ -502,14 +502,21 @@ def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
             if not any(region for region in valid_starting_regions if no_items_playthrough.state_list[world.id].can_reach(region)):
                 return (False, 'Invalid starting area')
 
+        playthrough_with_time_travel = Playthrough([world.state.copy() for world in worlds])
+        for world in worlds:
+            playthrough_with_time_travel.collect(ItemFactory('Time Travel', world=world))
+        playthrough_with_time_travel.visit_locations()
+
+        for world in worlds:
+            # For now, we consider that time of day must always be reachable as both ages without having collected any items
+            # In ER, Time of day logic considers that the root always has access to time passing so this is important to ensure
+            if not (any(region for region in playthrough_with_time_travel.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
+                    any(region for region in playthrough_with_time_travel.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
+                return (False, 'Guaranteed time passing as both ages')
+
         if any(world for world in worlds if world.starting_age == 'adult'):
             # When starting as adult, child Link should be able to reach ToT without having collected any items
             # This is important to ensure that the player never loses access to the pedestal after going child
-            playthrough_with_time_travel = Playthrough([world.state.copy() for world in worlds])
-            for world in worlds:
-                playthrough_with_time_travel.collect(ItemFactory('Time Travel', world=world))
-            playthrough_with_time_travel.visit_locations()
-
             for world in worlds:
                 if world.starting_age == 'adult' and not playthrough_with_time_travel.state_list[world.id].can_reach('Temple of Time', age='child'):
                     return (False, 'Links House to Temple of Time path as child')
