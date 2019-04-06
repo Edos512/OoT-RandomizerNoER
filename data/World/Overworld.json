@@ -88,16 +88,28 @@
             "Mido Chest Top Right": "True",
             "Mido Chest Bottom Left": "True",
             "Mido Chest Bottom Right": "True"
+        },
+        "exits": {
+            "Kokiri Forest": "True"
         }
     },
     {
-        "region_name": "Saria House"
+        "region_name": "Saria House",
+        "exits": {
+            "Kokiri Forest": "True"
+        }
     },
     {
-        "region_name": "House of Twins"
+        "region_name": "House of Twins",
+        "exits": {
+            "Kokiri Forest": "True"
+        }
     },
     {
-        "region_name": "Know It All House"
+        "region_name": "Know It All House",
+        "exits": {
+            "Kokiri Forest": "True"
+        }
     },
     {
         "region_name": "Kokiri Shop",
@@ -110,6 +122,9 @@
             "Kokiri Shop Item 6": "True",
             "Kokiri Shop Item 7": "True",
             "Kokiri Shop Item 8": "True"
+        },
+        "exits": {
+            "Kokiri Forest": "True"
         }
     },
     {
@@ -288,6 +303,9 @@
                 (Progressive_Scale, 2) or
                 (logic_lab_diving and Iron_Boots and can_use(Hookshot))",
             "GS Lab Underwater Crate": "Iron_Boots and can_use(Hookshot)"
+        },
+        "exits": {
+            "Lake Hylia": "True"
         }
     },
     {
@@ -295,6 +313,9 @@
         "locations": {
             "Child Fishing": "is_child",
             "Adult Fishing": "is_adult"
+        },
+        "exits": {
+            "Lake Hylia": "True"
         }
     },
     {
@@ -351,7 +372,10 @@
         }
     },
     {
-        "region_name": "Carpenter Tent"
+        "region_name": "Carpenter Tent",
+        "exits": {
+            "Gerudo Valley Far Side": "True"
+        }
     },
     {
         "region_name": "Gerudo Fortress",
@@ -450,6 +474,9 @@
         "region_name": "Colossus Fairy",
         "locations": {
             "Desert Colossus Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Desert Colossus": "True"
         }
     },
     {
@@ -559,6 +586,9 @@
         "region_name": "Hyrule Castle Fairy",
         "locations": {
             "Hyrule Castle Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Castle Grounds": "True"
         }
     },
     {
@@ -591,6 +621,9 @@
         "region_name": "Ganons Castle Fairy",
         "locations": {
             "Ganons Castle Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Castle Grounds": "True"
         }
     },
     {
@@ -605,6 +638,9 @@
                 ((has_big_poe_drop and (big_poe_count <= 3 or guarantee_hint)) or 
                     (Bottle_with_Big_Poe, big_poe_count))",
             "GS Castle Market Guard House": "is_child"
+        },
+        "exits": {
+            "Castle Town Entrance": "True"
         }
     },
     {
@@ -618,15 +654,24 @@
             "Castle Town Bazaar Item 6": "True",
             "Castle Town Bazaar Item 7": "True",
             "Castle Town Bazaar Item 8": "True"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
-        "region_name": "Castle Town Mask Shop"
+        "region_name": "Castle Town Mask Shop",
+        "exits": {
+            "Castle Town": "True"
+        }
     },
     {
         "region_name": "Castle Town Shooting Gallery",
         "locations": {
             "Child Shooting Gallery": "is_child"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
@@ -634,6 +679,9 @@
         "locations": {
             "Bombchu Bowling Bomb Bag": "has_bombchus",
             "Bombchu Bowling Piece of Heart": "has_bombchus"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
@@ -647,12 +695,18 @@
             "Castle Town Potion Shop Item 6": "True",
             "Castle Town Potion Shop Item 7": "True",
             "Castle Town Potion Shop Item 8": "True"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
         "region_name": "Castle Town Treasure Chest Game",
         "locations": {
             "Treasure Chest Game": "can_use(Lens_of_Truth)"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
@@ -666,16 +720,25 @@
             "Bombchu Shop Item 6": "True",
             "Bombchu Shop Item 7": "True",
             "Bombchu Shop Item 8": "True"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
         "region_name": "Castle Town Dog Lady",
         "locations": {
             "Dog Lady": "at_night"
+        },
+        "exits": {
+            "Castle Town": "True"
         }
     },
     {
-        "region_name": "Castle Town Man in Green House"
+        "region_name": "Castle Town Man in Green House",
+        "exits": {
+            "Castle Town": "True"
+        }
     },
     {
         "region_name": "Kakariko Village From Field",
@@ -733,7 +796,10 @@
         }
     },
     {
-        "region_name": "Carpenter Boss House"
+        "region_name": "Carpenter Boss House",
+        "exits": {
+            "Kakariko Village": "True"
+        }
     },
     {
         "region_name": "House of Skulltula",
@@ -748,16 +814,25 @@
                 (Gold_Skulltula_Token, 40) and guarantee_hint",
             "50 Gold Skulltula Reward": "
                 (Gold_Skulltula_Token, 50) and guarantee_hint"
+        },
+        "exits": {
+            "Kakariko Village": "True"
         }
     },
     {
-        "region_name": "Impas House"
+        "region_name": "Impas House",
+        "exits": {
+            "Kakariko Village": "True"
+        }
     },
     {
         "region_name": "Impas House Back",
         "locations": {
             "Impa House Freestanding PoH": "True",
             "Impas House Cow": "can_play(Eponas_Song)"
+        },
+        "exits": {
+            "Kakariko Village": "True"
         }
     },
     {
@@ -784,12 +859,18 @@
             "Kakariko Bazaar Item 6": "True",
             "Kakariko Bazaar Item 7": "True",
             "Kakariko Bazaar Item 8": "True"
+        },
+        "exits": {
+            "Kakariko Village": "True"
         }
     },
     {
         "region_name": "Kakariko Shooting Gallery",
         "locations": {
             "Adult Shooting Gallery": "can_use(Bow)"
+        },
+        "exits": {
+            "Kakariko Village": "True"
         }
     },
     {
@@ -810,7 +891,10 @@
         "region_name": "Kakariko Potion Shop Back"
     },
     {
-        "region_name": "Odd Medicine Building"
+        "region_name": "Odd Medicine Building",
+        "exits": {
+            "Kakariko Village": "True"
+        }
     },
     {
         "region_name": "Graveyard",
@@ -836,6 +920,9 @@
         "region_name": "Shield Grave",
         "locations": {
             "Shield Grave Chest": "True"
+        },
+        "exits": {
+            "Graveyard": "True"
         }
     },
     {
@@ -843,6 +930,9 @@
         "locations": {
             "Heart Piece Grave Chest": "can_play(Suns_Song)",
             "Fountain Fairies": "can_blast_or_smash and has_bottle"
+        },
+        "exits": {
+            "Graveyard": "True"
         }
     },
     {
@@ -853,6 +943,9 @@
                 is_adult or 
                 (has_slingshot or Boomerang or has_sticks or 
                     has_explosives or Kokiri_Sword)"
+        },
+        "exits": {
+            "Graveyard": "True"
         }
     },
     {
@@ -863,11 +956,15 @@
             "Nut Pot": "True"
         },
         "exits": {
+            "Graveyard": "True",
             "Windmill": "can_play(Song_of_Time)"
         }
     },
     {
-        "region_name": "Dampes House"
+        "region_name": "Dampes House",
+        "exits": {
+            "Graveyard": "True"
+        }
     },
     {
         "region_name": "Shadow Temple Warp Region",
@@ -1024,6 +1121,9 @@
             "Goron Shop Item 6": "True",
             "Goron Shop Item 7": "True",
             "Goron Shop Item 8": "True"
+        },
+        "exits": {
+            "Goron City": "True"
         }
     },
     {
@@ -1082,12 +1182,18 @@
         "region_name": "Crater Fairy",
         "locations": {
             "Crater Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Death Mountain Crater Lower": "True"
         }
     },
     {
         "region_name": "Mountain Summit Fairy",
         "locations": {
             "Mountain Summit Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Death Mountain Summit": "True"
         }
     },
     {
@@ -1214,12 +1320,18 @@
             "Zora Shop Item 6": "True",
             "Zora Shop Item 7": "True",
             "Zora Shop Item 8": "True"
+        },
+        "exits": {
+            "Zoras Domain": "True"
         }
     },
     {
         "region_name": "Zoras Fountain Fairy",
         "locations": {
             "Zoras Fountain Fairy Reward": "can_play(Zeldas_Lullaby)"
+        },
+        "exits": {
+            "Zoras Fountain": "True"
         }
     },
     {
@@ -1245,6 +1357,9 @@
         "region_name": "Talon House",
         "locations": {
             "Talons Chickens": "is_child and at_day and Zeldas_Letter"
+        },
+        "exits": {
+            "Lon Lon Ranch": "True"
         }
     },
     {
@@ -1252,6 +1367,9 @@
 		"locations": {
             "LLR Stables Left Cow": "can_play(Eponas_Song)",
             "LLR Stables Right Cow": "can_play(Eponas_Song)"
+        },
+        "exits": {
+            "Lon Lon Ranch": "True"
         }
     },
     {
@@ -1260,6 +1378,9 @@
             "Lon Lon Tower Freestanding PoH": "is_child",
             "LLR Tower Left Cow": "can_play(Eponas_Song)",
             "LLR Tower Right Cow": "can_play(Eponas_Song)"
+        },
+        "exits": {
+            "Lon Lon Ranch": "True"
         }
     },
     {
