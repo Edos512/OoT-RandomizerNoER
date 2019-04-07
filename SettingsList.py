@@ -1103,6 +1103,9 @@ setting_infos = [
             'All Indoors & Overworld':
             Same as 'All Indoors' but with Overworld loading zones shuffled
             in a new separate pool.
+
+            For more information, please refer to the doc linked at the
+            bottom of the first tab.
         ''',
         shared         = True,
         gui_params     = {
