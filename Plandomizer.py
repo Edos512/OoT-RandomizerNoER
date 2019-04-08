@@ -428,7 +428,7 @@ class WorldDistribution(object):
 
                 change_connections(matched_entrance, matched_target)
 
-                valid_placement, fail_reason = validate_worlds(worlds, locations_to_ensure_reachable, itempool)
+                valid_placement, fail_reason = validate_worlds(worlds, matched_entrance, locations_to_ensure_reachable, itempool)
                 if not valid_placement:
                     raise RuntimeError('Failed to connect %s To %s in world %d (because of %s)' %
                                             (matched_entrance, target_region, self.id + 1, fail_reason))

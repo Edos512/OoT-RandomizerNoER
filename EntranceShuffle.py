@@ -373,7 +373,7 @@ def shuffle_random_entrances(worlds):
         raise EntranceShuffleError('ALR is enabled but not all locations are reachable!')
 
     # Validate the worlds one last time to ensure all special conditions are still valid
-    valid_worlds, invalid_reason = validate_worlds(worlds, locations_to_ensure_reachable, complete_itempool)
+    valid_worlds, invalid_reason = validate_worlds(worlds, None, locations_to_ensure_reachable, complete_itempool)
     if not valid_worlds:
         raise EntranceShuffleError('Worlds are not valid after shuffling entrances because of %s', invalid_reason)
 
@@ -466,7 +466,7 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
                 change_connections(entrance, target)
 
                 if check_valid:
-                    valid_placement, fail_reason = validate_worlds(worlds, locations_to_ensure_reachable, complete_itempool)
+                    valid_placement, fail_reason = validate_worlds(worlds, entrance, locations_to_ensure_reachable, complete_itempool)
                 else:
                     valid_placement = True
 
@@ -499,7 +499,7 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
 
 # Validate the provided worlds' structures, returning whether or not the states are still correct based on some setting-dependent criterias
 # It also returns the reason for failing so we can use it in debug logs
-def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
+def validate_worlds(worlds, entrance_placed, locations_to_ensure_reachable, itempool):
 
     max_playthrough = Playthrough.max_explore([world.state for world in worlds], itempool)
 
@@ -510,7 +510,7 @@ def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
             if not max_playthrough.visited(location):
                 return (False, location.name)
 
-    if worlds[0].shuffle_special_interior_entrances or worlds[0].shuffle_overworld_entrances:
+    if entrance_placed == None or entrance_placed.type in ['SpecialInterior', 'Overworld']:
         for world in worlds:
             # Links House entrance should be reachable as child at some point in the seed
             links_house_entrance = get_entrance_replacing(world.get_region('Links House'), 'Kokiri Forest -> Links House')
