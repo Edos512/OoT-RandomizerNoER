@@ -274,7 +274,8 @@
             "Underwater Bottle": "
                 is_child and
                 (can_dive or 
-                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and 
+                        (Kokiri_Sword or Boomerang or Slingshot or as_adult_here)))",
             "Lake Hylia Sun": "
                 is_adult and 
                 (can_use(Distant_Scarecrow) or can_reach(Morpha, Location)) and can_use(Bow)",
@@ -297,7 +298,8 @@
             "Zoras Domain": "
                 is_child and
                 (can_dive or 
-                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and 
+                        (Kokiri_Sword or Boomerang or Slingshot or as_adult_here)))",
             "Lake Hylia Owl Flight": "is_child",
             "Lake Hylia Lab": "True",
             "Fishing Hole": "
@@ -459,7 +461,7 @@
             "Haunted Wasteland Bombchu Salesman": "
                 Progressive_Wallet and 
                 (is_adult or has_sticks or Kokiri_Sword)",
-            "GS Wasteland Ruins": "can_use(Hookshot)",
+            "GS Wasteland Ruins": "can_use(Hookshot) or can_use(Boomerang)",
             "Fairy Pot": "has_bottle"
         },
         "exits": {
