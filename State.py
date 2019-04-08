@@ -88,7 +88,10 @@ class State(object):
                 # If a spot is reachable at day and at dampe's time, then it's reachable at all times of day
                 return self.can_reach(spot, tod='day') and self.can_reach(spot, tod='dampe')
             else:
-                return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
+                if self.can_change_time_to(tod):
+                    return self.can_reach(spot)
+                else:
+                    return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
 
         # Only keep the current time of day state if we actually want to check for reachability at that time of day
         if self.tod != None and not keep_tod:
@@ -97,9 +100,9 @@ class State(object):
         if not isinstance(spot, Region):
             return spot.can_reach(self)
 
-        # If we are currently checking for reachability with a specific time of day and the time can be changed here,
+        # If we are currently checking for reachability with a specific time of day and the needed time can be obtained here,
         # we want to continue the reachability test without a time of day, to make sure we could actually get there
-        if self.tod != None and self.can_change_time_to(spot, self.tod):
+        if self.tod != None and self.can_provide_time(spot, self.tod):
             return self.with_tod(lambda state: state.can_reach(spot), None)
 
         # If we reached this point, it means the current age should be used
@@ -208,7 +211,7 @@ class State(object):
 
         if self.ensure_tod_access():
             if self.tod == None:
-                return self.can_reach(tod=tod)
+                return self.can_change_time_to(tod) or self.can_reach(tod=tod)
             else:
                 if tod == 'day':
                     return self.tod == 'day'
@@ -232,15 +235,17 @@ class State(object):
         return lambda_rule_result
 
 
-    def can_change_time_to(self, region, tod):
+    def can_change_time_to(self, tod):
+        # Sun's Song is only useful in cases where we need the normal day or night times (e.g. not dampe's time)
+        return (tod == 'day' or tod == 'night') and self.can_play('Suns Song')
+
+
+    def can_provide_time(self, region, tod):
         if region.time_passes:
             return True
         # Ganon's Castle Grounds is a special scene that forces time to be the start of the night (aka dampe's time)
         if region.name == 'Ganons Castle Grounds':
             return tod == 'night' or tod == 'dampe'
-        # Sun's Song is only sufficient in cases where we need the normal day or night times (e.g. not dampe's time)
-        if tod == 'day' or tod == 'night':
-            return self.can_play('Suns Song')
         return False
 
 
