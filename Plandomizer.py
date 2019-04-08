@@ -154,6 +154,8 @@ class EntranceRecord(SimpleRecord({'region': None, 'origin': None})):
         if list(self_dict.keys()) == ['region']:
             return str(self.region)
         else:
+            self_dict['from'] = self_dict['origin']
+            del self_dict['origin']
             return CollapseDict(self_dict)
 
 
@@ -165,7 +167,7 @@ class EntranceRecord(SimpleRecord({'region': None, 'origin': None})):
             origin_name = None
         return EntranceRecord({
             'region': entrance.connected_region.name,
-            'from': origin_name,
+            'origin': origin_name,
         })
 
 
