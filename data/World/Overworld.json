@@ -155,6 +155,7 @@
         "exits": {
             "Lost Woods Forest Exit": "True",
             "Goron City Woods Warp": "True",
+            "Lost Woods Bridge": "can_use(Magic_Bean)",
             "Zora River": "can_leave_forest and (can_dive or can_use(Iron_Boots))",
             "Lost Woods Beyond Mido": "is_child or logic_adult_meadow_access or can_play(Sarias_Song)",
             "Lost Woods Generic Grotto": "as_either_here(can_blast_or_smash)"
