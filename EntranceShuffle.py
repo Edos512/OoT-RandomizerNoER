@@ -559,7 +559,10 @@ def validate_worlds(worlds, entrance_placed, locations_to_ensure_reachable, item
 
 # Shorthand function to find an entrance leading to the requested region with the provided name
 def get_entrance_replacing(region, name):
-    return next(filter(lambda entrance: entrance.replaces and entrance.replaces.name == name, region.entrances))
+    try:
+        return next(filter(lambda entrance: entrance.replaces and entrance.replaces.name == name, region.entrances))
+    except StopIteration:
+        return region.world.get_entrance(name)
 
 
 # Change connections between an entrance and a target assumed entrance, in order to test the connections afterwards if necessary
