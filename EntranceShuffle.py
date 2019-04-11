@@ -1,5 +1,6 @@
 import random
 import logging
+from collections import OrderedDict
 from Playthrough import Playthrough
 from Rules import set_entrances_based_rules
 from Entrance import Entrance
@@ -15,6 +16,7 @@ def entrance_instances(world, entrance_pool):
     entrance_instances = []
     for type, forward_entrance, *return_entrance in entrance_pool:
         forward_entrance = set_shuffled_entrance(world, forward_entrance[0], forward_entrance[1], type)
+        forward_entrance.primary = True
         if return_entrance:
             return_entrance = return_entrance[0]
             return_entrance = set_shuffled_entrance(world, return_entrance[0], return_entrance[1], type)
@@ -142,9 +144,9 @@ entrance_shuffle_table = [
     ('Interior',        ('Zoras Fountain -> Zoras Fountain Fairy',                          { 'index': 0x0371 }),
                         ('Zoras Fountain Fairy -> Zoras Fountain',                          { 'index': 0x0394, 'dynamic_address': 0xBEFD7E })),
 
-    ('SpecialInterior', ('Kokiri Forest -> Links House Entrance',                           { 'index': 0x0272 }),
+    ('SpecialInterior', ('Kokiri Forest -> Links House',                                    { 'index': 0x0272 }),
                         ('Links House -> Kokiri Forest',                                    { 'index': 0x0211 })),
-    ('SpecialInterior', ('Temple of Time Exterior -> Temple of Time Entrance',              { 'index': 0x0053 }),
+    ('SpecialInterior', ('Temple of Time Exterior -> Temple of Time',                       { 'index': 0x0053 }),
                         ('Temple of Time -> Temple of Time Exterior',                       { 'index': 0x0472 })),
     ('SpecialInterior', ('Kakariko Village -> Windmill',                                    { 'index': 0x0453 }),
                         ('Windmill -> Kakariko Village',                                    { 'index': 0x0351 })),
@@ -186,7 +188,7 @@ entrance_shuffle_table = [
     ('Overworld',       ('Kokiri Forest -> Lost Woods Bridge From Forest',                  { 'index': 0x05E0 }),
                         ('Lost Woods Bridge -> Kokiri Forest',                              { 'index': 0x020D })),
     ('Overworld',       ('Kokiri Forest -> Lost Woods',                                     { 'index': 0x011E }),
-                        ('Lost Woods -> Kokiri Forest',                                     { 'index': 0x0286 })),
+                        ('Lost Woods Forest Exit -> Kokiri Forest',                         { 'index': 0x0286 })),
     ('Overworld',       ('Lost Woods -> Goron City Woods Warp',                             { 'index': 0x04E2 }),
                         ('Goron City Woods Warp -> Lost Woods',                             { 'index': 0x04D6 })),
     ('Overworld',       ('Lost Woods -> Zora River',                                        { 'index': 0x01DD }),
@@ -271,7 +273,7 @@ def shuffle_random_entrances(worlds):
     for world in worlds:
 
         # Determine entrance pools based on settings
-        entrance_pools = {}
+        entrance_pools = OrderedDict()
 
         if worlds[0].shuffle_special_interior_entrances:
             special_interior_entrance_pool = get_entrance_pool('SpecialInterior')
@@ -280,7 +282,10 @@ def shuffle_random_entrances(worlds):
         if worlds[0].shuffle_overworld_entrances:
             overworld_entrance_pool = get_entrance_pool('Overworld')
             entrance_pools['Overworld'] = entrance_instances(world, overworld_entrance_pool)
-            entrance_pools['Overworld'] += [entrance.reverse for entrance in entrance_pools['Overworld']]
+            for entrance in entrance_pools['Overworld'].copy():
+                entrance.reverse.primary = True
+                entrance_pools['Overworld'].append(entrance.reverse)
+
             owl_entrance_pool = get_entrance_pool('OwlDrop')
             entrance_pools['OwlDrop'] = entrance_instances(world, owl_entrance_pool)
 
@@ -304,32 +309,30 @@ def shuffle_random_entrances(worlds):
         # Set the assumption that all entrances are reachable
         target_entrance_pools = {}
         for pool_type, entrance_pool in entrance_pools.items():
-            if pool_type == 'OwlDrop':
-                # Temporarily set all owl drop entrances unreachable
-                for entrance in entrance_pool:
-                    entrance.access_rule = lambda state: False
-            else:
-                target_entrance_pools[pool_type] = assume_pool_reachable(world, entrance_pool)
+            target_entrance_pools[pool_type] = assume_pool_reachable(world, entrance_pool)
 
         # Special interiors need to be handled specifically by placing them in reverse and among all interiors, including normal ones
         if 'SpecialInterior' in entrance_pools:
             entrance_pools['SpecialInterior'] = [entrance.reverse for entrance in entrance_pools['SpecialInterior']]
             target_entrance_pools['SpecialInterior'] = [entrance.reverse for entrance in target_entrance_pools['Interior']]
 
+        # Owl Drops are extra entrances that will be connected to an owl drop or will be a duplicate entrance to an overworld entrance
+        # We don't assume they are reachable until placing them because we don't want the placement algorithm to expect all overworld regions to be reachable
+        if 'OwlDrop' in entrance_pools:
+            duplicate_overworld_targets = [target.copy(target.parent_region) for target in target_entrance_pools['Overworld']]
+            for target in duplicate_overworld_targets:
+                target.connect(world.get_region(target.connected_region))
+                target.parent_region.exits.append(target)
+            target_entrance_pools['OwlDrop'] += duplicate_overworld_targets
+            for target in target_entrance_pools['OwlDrop']:
+                target.access_rule = lambda state: False
+
+        # Set entrances defined in the distribution
+        world.distribution.set_shuffled_entrances(worlds, entrance_pools, target_entrance_pools, locations_to_ensure_reachable, complete_itempool)
+
         # Shuffle all entrances among the pools to shuffle
         for pool_type, entrance_pool in entrance_pools.items():
-            if pool_type == 'OwlDrop':
-                # Owl Drops are handled on their own, without actually using the entrance shuffling algorithm
-                owl_drop_entrances = entrance_pool + entrance_pools['Overworld']
-                for entrance in entrance_pool:
-                    entrance.access_rule = lambda state: True
-                    target_drop = random.choice(owl_drop_entrances)
-                    entrance.connect(target_drop.connected_region)
-                    entrance.replaces = target_drop.replaces
-                    logging.getLogger('').debug('Connected %s To %s [World %d]', entrance, entrance.connected_region, entrance.world.id)
-                continue
-
-            if pool_type in ['SpecialInterior', 'Overworld', 'Dungeon']:
+            if pool_type in ['SpecialInterior', 'Overworld', 'OwlDrop', 'Dungeon']:
                 # Those pools contain entrances leading to regions that might open access to completely new areas
                 # Dungeons are among those because exiting Spirit Temple from the hands is in logic 
                 # and could give access to Desert Colossus and potentially new areas from there
@@ -337,6 +340,11 @@ def shuffle_random_entrances(worlds):
             else:
                 # Other pools are only "internal", which means they are leaves in the world graph and can't open new access
                 shuffle_entrance_pool(worlds, entrance_pool, target_entrance_pools[pool_type], locations_to_ensure_reachable, internal=True)
+
+            if pool_type == 'OwlDrop':
+                # Delete all unused owl drop targets after placing the entrances, since the unused targets won't ever be replaced
+                for target in target_entrance_pools[pool_type]:
+                    delete_target_entrance(target)
 
     # Multiple checks after shuffling entrances to make sure everything went fine
     max_playthrough = Playthrough.max_explore([world.state for world in worlds], complete_itempool)
@@ -365,7 +373,7 @@ def shuffle_random_entrances(worlds):
         raise EntranceShuffleError('ALR is enabled but not all locations are reachable!')
 
     # Validate the worlds one last time to ensure all special conditions are still valid
-    valid_worlds, invalid_reason = validate_worlds(worlds, locations_to_ensure_reachable, complete_itempool)
+    valid_worlds, invalid_reason = validate_worlds(worlds, None, locations_to_ensure_reachable, complete_itempool)
     if not valid_worlds:
         raise EntranceShuffleError('Worlds are not valid after shuffling entrances because of %s', invalid_reason)
 
@@ -455,18 +463,10 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
                                                 entrance, target.connected_region, entrance.world.id)
                     continue
 
-                replaced_reverse = target.replaces.reverse
+                change_connections(entrance, target)
 
-                entrance.connect(target.disconnect())
-                if replaced_reverse:
-                    replaced_reverse.connect(entrance.reverse.assumed.disconnect())
-
-                # Special interior entrances are placed in reverse so their assumed entrance needs a specific access rule change once we place it
-                if entrance.type == 'SpecialInterior':
-                    entrance.assumed.access_rule = lambda state: False
-
-                if check_valid == True:
-                    valid_placement, fail_reason = validate_worlds(worlds, locations_to_ensure_reachable, complete_itempool)
+                if check_valid:
+                    valid_placement, fail_reason = validate_worlds(worlds, entrance, locations_to_ensure_reachable, complete_itempool)
                 else:
                     valid_placement = True
 
@@ -486,10 +486,7 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
         # Check if all entrances were able to be placed, log connections and continue if that's the case, or rollback everything otherwise
         if success:
             for entrance, target in rollbacks:
-                replaced_reverse = target.replaces.reverse
-                replace_target_entrance(entrance, target)
-                if replaced_reverse:
-                    replace_target_entrance(replaced_reverse, entrance.reverse.assumed)
+                confirm_replacement(entrance, target)
             return
         else:
             for entrance, target in rollbacks:
@@ -502,7 +499,7 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
 
 # Validate the provided worlds' structures, returning whether or not the states are still correct based on some setting-dependent criterias
 # It also returns the reason for failing so we can use it in debug logs
-def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
+def validate_worlds(worlds, entrance_placed, locations_to_ensure_reachable, itempool):
 
     max_playthrough = Playthrough.max_explore([world.state for world in worlds], itempool)
 
@@ -513,66 +510,101 @@ def validate_worlds(worlds, locations_to_ensure_reachable, itempool):
             if not max_playthrough.visited(location):
                 return (False, location.name)
 
-    if worlds[0].shuffle_special_interior_entrances or worlds[0].shuffle_overworld_entrances:
+    if entrance_placed == None or entrance_placed.type in ['SpecialInterior', 'Overworld']:
         for world in worlds:
-            # Links House entrance should always be reachable as child at some point in the seed
-            if not max_playthrough.state_list[world.id].can_reach('Links House Entrance', age='child'):
+            # Links House entrance should be reachable as child at some point in the seed
+            links_house_entrance = get_entrance_replacing(world.get_region('Links House'), 'Kokiri Forest -> Links House')
+            if not max_playthrough.state_list[world.id].can_reach(links_house_entrance, age='child'):
                 return (False, 'Links House Entrance')
 
-            # Temple of Time entrance should always be reachable as both ages at some point in the seed
-            if not max_playthrough.state_list[world.id].can_reach('Temple of Time Entrance', age='both'):
+            # Temple of Time entrance should be reachable as both ages at some point in the seed
+            temple_of_time_entrance = get_entrance_replacing(world.get_region('Temple of Time'), 'Temple of Time Exterior -> Temple of Time')
+            if not max_playthrough.state_list[world.id].can_reach(temple_of_time_entrance, age='both'):
                 return (False, 'Temple of Time Entrance')
 
-        # At least one valid starting region with all basic refills should be reachable without any items at the beginning of the seed
+            # Windmill door entrance should be reachable as both ages at some point in the seed
+            windmill_door_entrance = get_entrance_replacing(world.get_region('Windmill'), 'Kakariko Village -> Windmill')
+            if not max_playthrough.state_list[world.id].can_reach(windmill_door_entrance, age='both'):
+                return (False, 'Windmill Door Entrance')
+
+        # At least one valid starting region with all basic refills should be reachable without using any items at the beginning of the seed
         no_items_playthrough = Playthrough([State(world) for world in worlds])
-        no_items_playthrough.visit_locations()
 
         valid_starting_regions = ['Kokiri Forest', 'Kakariko Village']
         for world in worlds:
             if not any(region for region in valid_starting_regions if no_items_playthrough.state_list[world.id].can_reach(region)):
                 return (False, 'Invalid starting area')
 
+        playthrough_with_time_travel = Playthrough([world.state.copy() for world in worlds])
+        for world in worlds:
+            playthrough_with_time_travel.collect(ItemFactory('Time Travel', world=world))
+        playthrough_with_time_travel.visit_locations()
+
+        for world in worlds:
+            # For now, we consider that time of day must always be reachable as both ages without having collected any items
+            # In ER, Time of day logic considers that the root always has access to time passing so this is important to ensure
+            if not (any(region for region in playthrough_with_time_travel.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
+                    any(region for region in playthrough_with_time_travel.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
+                return (False, 'Guaranteed time passing as both ages')
+
         if any(world for world in worlds if world.starting_age == 'adult'):
             # When starting as adult, child Link should be able to reach ToT without having collected any items
             # This is important to ensure that the player never loses access to the pedestal after going child
-            playthrough_with_time_travel = Playthrough([world.state.copy() for world in worlds])
-            for world in worlds:
-                playthrough_with_time_travel.collect(ItemFactory('Time Travel', world=world))
-            playthrough_with_time_travel.visit_locations()
-
             for world in worlds:
                 if world.starting_age == 'adult' and not playthrough_with_time_travel.state_list[world.id].can_reach('Temple of Time', age='child'):
                     return (False, 'Links House to Temple of Time path as child')
 
-        # We consider that time of day must always be reachable as both ages without any items in the item pool
-        # We don't use any items yet to be placed to ensure the fill algorithm isn't forced to provide, for example, an Ocarina and Sun's Song very early
-        base_playthrough = Playthrough.max_explore([world.state for world in worlds])
-        for world in worlds:
-            base_playthrough.collect(ItemFactory('Time Travel', world=world))
-        base_playthrough.visit_locations()
-        for world in worlds:
-            if not (any(region for region in base_playthrough.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
-                    any(region for region in base_playthrough.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
-                return (False, 'Guaranteed time passing as both ages')
-
     return (True, None)
 
 
-# Replace a target entrance by a new entrance, logging the new connection and completely deleting the target entrance
-def replace_target_entrance(entrance, target_entrance):
+# Shorthand function to find an entrance leading to the requested region with the provided name
+def get_entrance_replacing(region, name):
+    try:
+        return next(filter(lambda entrance: entrance.replaces and entrance.replaces.name == name, region.entrances))
+    except StopIteration:
+        return region.world.get_entrance(name)
+
+
+# Change connections between an entrance and a target assumed entrance, in order to test the connections afterwards if necessary
+def change_connections(entrance, target_entrance):
+    entrance.connect(target_entrance.disconnect())
     entrance.replaces = target_entrance.replaces
-    target_entrance.parent_region.exits.remove(target_entrance)
-    del target_entrance
-    logging.getLogger('').debug('Connected %s To %s [World %d]', entrance, entrance.connected_region, entrance.world.id)
+    if entrance.reverse:
+        target_entrance.replaces.reverse.connect(entrance.reverse.assumed.disconnect())
+        target_entrance.replaces.reverse.replaces = entrance.reverse.assumed.replaces
+
+    # Special interior entrances are placed in reverse so their assumed entrance needs a specific access rule change once we place it
+    if entrance.type == 'SpecialInterior':
+        entrance.assumed.access_rule = lambda state: False
 
 
 # Restore connections between an entrance and a target assumed entrance
 def restore_connections(entrance, target_entrance):
-    replaced_reverse = target_entrance.replaces.reverse
     target_entrance.connect(entrance.disconnect())
-    if replaced_reverse:
-        entrance.reverse.assumed.connect(replaced_reverse.disconnect())
+    entrance.replaces = None
+    if entrance.reverse:
+        entrance.reverse.assumed.connect(target_entrance.replaces.reverse.disconnect())
+        target_entrance.replaces.reverse.replaces = None
 
     # Restore the assumed entrance access rule if we are dealing with a special interior entrance
     if entrance.type == 'SpecialInterior':
         entrance.assumed.access_rule = lambda state: True
+
+
+# Confirm the replacement of a target entrance by a new entrance, logging the new connections and completely deleting the target entrances
+def confirm_replacement(entrance, target_entrance):
+    delete_target_entrance(target_entrance)
+    logging.getLogger('').debug('Connected %s To %s [World %d]', entrance, entrance.connected_region, entrance.world.id)
+    if entrance.reverse:
+        replaced_reverse = target_entrance.replaces.reverse
+        delete_target_entrance(entrance.reverse.assumed)
+        logging.getLogger('').debug('Connected %s To %s [World %d]', replaced_reverse, replaced_reverse.connected_region, replaced_reverse.world.id)
+
+
+# Delete an assumed target entrance, by disconnecting it if needed and removing it from its parent region
+def delete_target_entrance(target_entrance):
+    if target_entrance.connected_region != None:
+        target_entrance.disconnect()
+    if target_entrance.parent_region != None:
+        target_entrance.parent_region.exits.remove(target_entrance)
+        target_entrance.parent_region = None

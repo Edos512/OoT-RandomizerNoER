@@ -217,8 +217,7 @@ class Playthrough(object):
 
     # Retrieve all item locations in the worlds that have progression items
     def progression_locations(self):
-        return [location for state in self.state_list for location in state.world.get_filled_locations() 
-                if location.item.advancement and (location.item.type != 'Drop' or not state.has(location.item.name))]
+        return [location for state in self.state_list for location in state.world.get_filled_locations() if location.item.advancement]
 
 
     # This returns True if every state is beatable. It's important to ensure

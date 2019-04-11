@@ -43,7 +43,7 @@
             "Gossip Stone Fairy": "can_summon_gossip_fairy and has_bottle"
         },
         "exits": {
-            "Links House Entrance": "True",
+            "Links House": "True",
             "Mido House": "True",
             "Saria House": "True",
             "House of Twins": "True",
@@ -77,18 +77,9 @@
         }
     },
     {
-        "region_name": "Links House Entrance",
-        "scene": "Links House",
-        "exits": {
-            "Links House": "True"
-        }
-    },
-    {
         "region_name": "Links House",
-        "scene": "Links House",
-        "hint": "Link's House",
         "locations": {
-            "Links House Cow": "is_adult and can_play(Eponas_Song) and as_adult(can_reach(Lon_Lon_Ranch))"
+            "Links House Cow": "is_adult and can_play(Eponas_Song) and can_reach(Lon_Lon_Ranch)"
         },
         "exits": {
             "Kokiri Forest": "True"
@@ -141,6 +132,13 @@
         }
     },
     {
+        "region_name": "Lost Woods Forest Exit",
+        "scene": "Lost Woods",
+        "exits": {
+            "Kokiri Forest": "True"
+        }
+    },
+    {
         "region_name": "Lost Woods",
         "scene": "Lost Woods",
         "hint": "the Lost Woods",
@@ -155,8 +153,9 @@
             "Bug Shrub": "is_child and can_cut_shrubs and has_bottle"
         },
         "exits": {
-            "Kokiri Forest": "True",
+            "Lost Woods Forest Exit": "True",
             "Goron City Woods Warp": "True",
+            "Lost Woods Bridge": "can_use(Magic_Bean)",
             "Zora River": "can_leave_forest and (can_dive or can_use(Iron_Boots))",
             "Lost Woods Beyond Mido": "is_child or logic_adult_meadow_access or can_play(Sarias_Song)",
             "Lost Woods Generic Grotto": "as_either_here(can_blast_or_smash)"
@@ -176,7 +175,8 @@
             "Butterfly Fairy": "can_use(Sticks) and has_bottle"
         },
         "exits": {
-            "Lost Woods": "True",
+            "Lost Woods Forest Exit": "True",
+            "Lost Woods": "is_child or can_play(Sarias_Song)",
             "Sacred Forest Meadow Entryway": "True",
             "Deku Theater": "True",
             "Lost Woods Sales Grotto": "as_either_here(can_blast_or_smash)"
@@ -275,7 +275,8 @@
             "Underwater Bottle": "
                 is_child and
                 (can_dive or 
-                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and 
+                        (Kokiri_Sword or Boomerang or Slingshot or as_adult_here)))",
             "Lake Hylia Sun": "
                 is_adult and 
                 (can_use(Distant_Scarecrow) or can_reach(Morpha, Location)) and can_use(Bow)",
@@ -298,7 +299,8 @@
             "Zoras Domain": "
                 is_child and
                 (can_dive or 
-                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and as_adult_here))",
+                    (child_lake_hylia_control and as_adult(can_reach(Morpha, Location)) and 
+                        (Kokiri_Sword or Boomerang or Slingshot or as_adult_here)))",
             "Lake Hylia Owl Flight": "is_child",
             "Lake Hylia Lab": "True",
             "Fishing Hole": "
@@ -345,22 +347,33 @@
         "hint": "Gerudo Valley",
         "time_passes": true,
         "locations": {
-            "Gerudo Valley Waterfall Freestanding PoH": "True",
             "Gerudo Valley Crate Freestanding PoH": "is_child or can_use(Longshot)",
             "GS Gerudo Valley Small Bridge": "can_use(Boomerang) and at_night",
-            "GS Gerudo Valley Bean Patch": "can_plant_bugs and can_child_attack",
-            "Gerudo Valley Cow": "is_child and can_play(Eponas_Song)",
-            "Gerudo Valley Gossip Stone": "True",
-            "Gossip Stone Fairy": "can_summon_gossip_fairy and has_bottle",
             "Bug Rock": "is_child and has_bottle"
         },
         "exits": {
             "Hyrule Field": "True",
-            "Lake Hylia": "True",
+            "Gerudo Valley Stream": "True",
             "Gerudo Valley Octorok Grotto": "can_use(Silver_Gauntlets)",
             "Gerudo Valley Far Side": "
                 is_adult and 
                 (can_use(Epona) or can_use(Longshot) or gerudo_fortress == 'open' or Carpenter_Rescue)"
+        }
+    },
+    {
+        "region_name": "Gerudo Valley Stream",
+        "scene": "Gerudo Valley",
+        "hint": "Gerudo Valley",
+        "time_passes": true,
+        "locations": {
+            "Gerudo Valley Waterfall Freestanding PoH": "True",
+            "GS Gerudo Valley Bean Patch": "can_plant_bugs and can_child_attack",
+            "Gerudo Valley Cow": "is_child and can_play(Eponas_Song)",
+            "Gerudo Valley Gossip Stone": "True",
+            "Gossip Stone Fairy": "can_summon_gossip_fairy and has_bottle"
+        },
+        "exits": {
+            "Lake Hylia": "True"
         }
     },
     {
@@ -374,11 +387,11 @@
             "GS Gerudo Valley Pillar": "can_use(Hookshot) and at_night"
         },
         "exits": {
-            "Lake Hylia": "True",
+            "Gerudo Fortress": "True",
+            "Gerudo Valley Stream": "True",
             "Gerudo Valley": "
                 is_child or Epona or can_use(Longshot) or
                 gerudo_fortress == 'open' or Carpenter_Rescue",
-            "Gerudo Fortress": "True",
             "Carpenter Tent": "is_adult", # Invisible as child so not in logic
             "Gerudo Valley Storms Grotto": "is_adult and can_play(Song_of_Storms)" # Not there as child
         }
@@ -449,7 +462,8 @@
             "Haunted Wasteland Bombchu Salesman": "
                 Progressive_Wallet and 
                 (is_adult or has_sticks or Kokiri_Sword)",
-            "GS Wasteland Ruins": "can_use(Hookshot)"
+            "GS Wasteland Ruins": "can_use(Hookshot) or can_use(Boomerang)",
+            "Fairy Pot": "has_bottle"
         },
         "exits": {
             "Haunted Wasteland Near Colossus": "(logic_lens == 'chest') or can_use(Lens_of_Truth)"
@@ -538,19 +552,11 @@
         },
         "exits": {
             "Castle Town": "True",
-            "Temple of Time Entrance": "True"
-        }
-    },
-    {
-        "region_name": "Temple of Time Entrance",
-        "scene": "Temple of Time",
-        "exits": {
             "Temple of Time": "True"
         }
     },
     {
         "region_name": "Temple of Time",
-        "scene": "Temple of Time",
         "hint": "Temple of Time",
         "locations": {
             "Zelda": "Shadow_Medallion and Spirit_Medallion and is_adult"
@@ -562,7 +568,6 @@
     },
     {
         "region_name": "Beyond Door of Time",
-        "scene": "Temple of Time",
         "hint": "Temple of Time",
         "locations": {
             "Master Sword Pedestal": "True",
@@ -819,7 +824,7 @@
             "Kakariko Bazaar": "is_adult and at_day",
             "Kakariko Shooting Gallery": "is_adult and at_day",
             "Bottom of the Well": "
-                (is_child and can_play(Song_of_Storms)) or 
+                (is_child and can_reach(Windmill) and can_play(Song_of_Storms)) or 
                 (is_adult and shuffle_dungeon_entrances)",
             "Kakariko Potion Shop Front": "is_child or at_day",
             "Kakariko Potion Shop Back": "is_adult and at_day",

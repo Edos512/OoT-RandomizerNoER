@@ -79,7 +79,8 @@
             "King Dodongo": "
                 (has_bombs or Progressive_Strength_Upgrade) and 
                 (is_adult or has_sticks or Kokiri_Sword)",
-            "GS Dodongo's Cavern Back Room": "True"
+            "GS Dodongo's Cavern Back Room": "True",
+            "Fairy Pot": "has_bottle"
         },
         "exits": {
             "Dodongos Cavern Lobby": "True"

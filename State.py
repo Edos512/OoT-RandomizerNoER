@@ -88,7 +88,10 @@ class State(object):
                 # If a spot is reachable at day and at dampe's time, then it's reachable at all times of day
                 return self.can_reach(spot, tod='day') and self.can_reach(spot, tod='dampe')
             else:
-                return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
+                if self.can_change_time_to(tod):
+                    return self.can_reach(spot)
+                else:
+                    return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
 
         # Only keep the current time of day state if we actually want to check for reachability at that time of day
         if self.tod != None and not keep_tod:
@@ -97,9 +100,9 @@ class State(object):
         if not isinstance(spot, Region):
             return spot.can_reach(self)
 
-        # If we are currently checking for reachability with a specific time of day and the time can be changed here,
+        # If we are currently checking for reachability with a specific time of day and the needed time can be obtained here,
         # we want to continue the reachability test without a time of day, to make sure we could actually get there
-        if self.tod != None and self.can_change_time_to(spot, self.tod):
+        if self.tod != None and self.can_provide_time(spot, self.tod):
             return self.with_tod(lambda state: state.can_reach(spot), None)
 
         # If we reached this point, it means the current age should be used
@@ -111,9 +114,6 @@ class State(object):
         if spot.recursion_count[age_type] > 0:
             return False
 
-        if self.tod == None and self.playthrough != None:
-            if self.playthrough.can_reach(spot, age=age_type):
-                return True
         # Normal caches can't be used while checking for reachability with a specific time of day
         if self.tod == None:
             if self.playthrough != None and self.playthrough.can_reach(spot, age=age_type):
@@ -211,7 +211,7 @@ class State(object):
 
         if self.ensure_tod_access():
             if self.tod == None:
-                return self.can_reach(tod=tod)
+                return self.can_change_time_to(tod) or self.can_reach(tod=tod)
             else:
                 if tod == 'day':
                     return self.tod == 'day'
@@ -235,15 +235,17 @@ class State(object):
         return lambda_rule_result
 
 
-    def can_change_time_to(self, region, tod):
+    def can_change_time_to(self, tod):
+        # Sun's Song is only useful in cases where we need the normal day or night times (e.g. not dampe's time)
+        return (tod == 'day' or tod == 'night') and self.can_play('Suns Song')
+
+
+    def can_provide_time(self, region, tod):
         if region.time_passes:
             return True
         # Ganon's Castle Grounds is a special scene that forces time to be the start of the night (aka dampe's time)
         if region.name == 'Ganons Castle Grounds':
             return tod == 'night' or tod == 'dampe'
-        # Sun's Song is only sufficient in cases where we need the normal day or night times (e.g. not dampe's time)
-        if tod == 'day' or tod == 'night':
-            return self.can_play('Suns Song')
         return False
 
 
@@ -430,7 +432,7 @@ class State(object):
     def can_cut_shrubs(self):
         return self.is_adult() or self.has_sticks() or self.has('Kokiri Sword') or \
                self.has_explosives() or self.has('Boomerang')
-    
+
 
     def can_summon_gossip_fairy(self):
         return self.can_play('Zeldas Lullaby') or self.can_play('Eponas Song') or \
@@ -496,18 +498,29 @@ class State(object):
                 self.has('Claim Check')
                 or (zora_thawed and (has_high_trade or (has_low_trade and carpenter_access))))
         else:
+            # Require certain warp songs based on ER settings to ensure the player doesn't have to savewarp in order to complete the trade quest
+            # This is meant to avoid possible logical softlocks until either the trade quest is reworked or a better solution is found
+            guaranteed_path = True
+            if self.world.shuffle_overworld_entrances:
+                guaranteed_path = self.can_play('Prelude of Light')
+            elif self.world.shuffle_interior_entrances:
+                colossus_fairy_entrance = self.world.get_entrance('Desert Colossus -> Colossus Fairy')
+                if colossus_fairy_entrance.connected_region and colossus_fairy_entrance.connected_region.name == 'Lake Hylia Lab':
+                    guaranteed_path = (self.can_play('Prelude of Light') or self.can_play('Minuet of Forest') or
+                                        self.can_play('Serenade of Water') or self.can_play('Nocturne of Shadow'))
+
             zora_thawed = self.can_reach('Zoras Domain', age='adult') and self.has_blue_fire()
             pocket_egg = self.has('Pocket Egg')
-            pocket_cucco = self.has('Pocket Cucco') or (pocket_egg and self.can_reach_time('day'))
+            pocket_cucco = self.has('Pocket Cucco') or pocket_egg
             cojiro = self.has('Cojiro') or (pocket_cucco and self.can_reach('Carpenter Boss House', age='adult'))
-            odd_mushroom = self.has('Odd Mushroom') or (cojiro and self.can_reach('Lost Woods', age='adult'))
-            odd_poutice = odd_mushroom and self.can_reach('Odd Medicine Building', age='adult') and self.can_reach('Lost Woods', age='adult')
-            poachers_saw = self.has('Poachers Saw') or (odd_poutice and self.can_reach('Goron City', age='adult') and 
+            odd_mushroom = self.has('Odd Mushroom') or cojiro
+            odd_poultice = odd_mushroom and self.can_reach('Odd Medicine Building', age='adult') and self.can_reach('Lost Woods', age='adult')
+            poachers_saw = self.has('Poachers Saw') or (odd_poultice and self.can_reach('Goron City', age='adult') and 
                                                         (self.can_blast_or_smash() or self.has('Progressive Strength Upgrade')))
             broken_sword = self.has('Broken Sword') or (poachers_saw and self.can_reach('Gerudo Valley Far Side', age='adult'))
             prescription = self.has('Prescription') or broken_sword
-            eyeball_frog = (self.has('Eyeball Frog') or prescription) and zora_thawed
-            eyedrops = (self.has('Eyedrops') or eyeball_frog) and self.can_reach('Lake Hylia Lab', age='adult') and zora_thawed
+            eyeball_frog = self.has('Eyeball Frog') or prescription
+            eyedrops = (self.has('Eyedrops') or eyeball_frog) and self.can_reach('Lake Hylia Lab', age='adult') and zora_thawed and guaranteed_path
             return (self.has('Claim Check')
                     or (eyedrops and
                         (self.world.shuffle_interior_entrances

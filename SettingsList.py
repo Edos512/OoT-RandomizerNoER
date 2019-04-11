@@ -1123,9 +1123,12 @@ setting_infos = [
             Extended version of 'Simple Indoors' with some extra entrances:
             Windmill, Link's House and Temple of Time.
 
-            'All Indoors & Overworld':
+              'All Indoors & Overworld':
             Same as 'All Indoors' but with Overworld loading zones shuffled
             in a new separate pool.
+
+            For more information, please refer to the doc linked at the
+            bottom of the first tab.
         ''',
         shared         = True,
         gui_params     = {

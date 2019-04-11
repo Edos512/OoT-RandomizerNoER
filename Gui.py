@@ -512,9 +512,11 @@ def guiMain(settings=None):
     
     notebook.pack(fill=BOTH, expand=True, padx=5, pady=5)
 
+    multiworldSettingsFrame = Frame(frames['rom_tab'])
+    multiworldSettingsFrame.pack(side=TOP, fill=BOTH, expand=True, anchor=NW)
 
     #Multi-World
-    widgets['multiworld'] = LabelFrame(frames['rom_tab'], text='Multi-World Generation')
+    widgets['multiworld'] = LabelFrame(multiworldSettingsFrame, text='Multi-World Generation')
     countLabel = Label(
             widgets['multiworld'],
             wraplength=250,
@@ -635,7 +637,7 @@ def guiMain(settings=None):
 
 
     # Settings Presets
-    widgets['settings_presets'] = LabelFrame(frames['rom_tab'], text='Settings Presets')
+    widgets['settings_presets'] = LabelFrame(multiworldSettingsFrame, text='Settings Presets')
     countLabel = Label(
             widgets['settings_presets'],
             wraplength=250,
@@ -707,7 +709,13 @@ def guiMain(settings=None):
             toggle_widget(widgets['count'], False)
             toggle_widget(widgets['settings_presets'], False)
 
+    # Entrance Shuffle information link (temporary)
+    widgets['entrance_shuffle_info'] = LabelFrame(frames['rom_tab'], text='Entrance Shuffle Information')
+    hyperLabel = Label(widgets['entrance_shuffle_info'], wraplength=540, justify=LEFT, text='https://docs.google.com/document/d/1aDMdi25xo2pvc3yfmGQ1yhzhxeISVT-nNbdreAB8F04/edit?usp=sharing', fg='blue', cursor='hand2')
+    hyperLabel.bind("<Button-1>", lambda event: webbrowser.open_new(r"https://docs.google.com/document/d/1aDMdi25xo2pvc3yfmGQ1yhzhxeISVT-nNbdreAB8F04/edit?usp=sharing"))
+    hyperLabel.pack(side=TOP, anchor=W, padx=10, pady=5)
 
+    widgets['entrance_shuffle_info'].pack(side=BOTTOM, fill=X, anchor=NW, padx=5, pady=5)
 
     generation_notebook = ttk.Notebook(mainWindow)
     frames['gen_from_seed'] = ttk.Frame(generation_notebook)

@@ -738,7 +738,6 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
                 write_entrance(replaced_entrance["index"], new_entrance["blue_warp"], 2)
 
     if world.shuffle_overworld_entrances:
-
         # Prevent the ocarina cutscene from leading straight to hyrule field
         symbol = rom.sym('OCARINAS_SHUFFLED')
         rom.write_byte(symbol, 1)
