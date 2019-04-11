@@ -514,6 +514,7 @@ setting_infos = [
         max            = 255, 
         default        = 1,
         shared         = True,
+        exclude_random= True
     ),
     Scale('player_num', 
         min            = 1, 
