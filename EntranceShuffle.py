@@ -428,8 +428,13 @@ def shuffle_entrances(worlds, entrances, target_entrances, locations_to_ensure_r
             random.shuffle(target_entrances)
 
             for target in target_entrances:
-                # An entrance can't be connected to its reverse so we must always skip that case
-                if target.connected_region == None or entrance == target.replaces.reverse:
+                if target.connected_region == None:
+                    continue
+
+                # An entrance shouldn't be connected to its own scene, so we fail in that situation
+                if entrance.parent_region.scene and entrance.parent_region.scene == target.connected_region.scene:
+                    logging.getLogger('').debug('Failed to connect %s To %s (Reason: Self Scene Connection) [World %d]',
+                                                entrance, target.connected_region, entrance.world.id)
                     continue
 
                 change_connections(entrance, target)
