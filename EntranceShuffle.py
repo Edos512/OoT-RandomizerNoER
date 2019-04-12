@@ -484,8 +484,11 @@ def validate_worlds(worlds, entrance_placed, locations_to_ensure_reachable, item
                 if not max_playthrough.visited(location):
                     raise EntranceShuffleError('%s is unreachable' % location.name)
 
-    if (entrance_placed == None and worlds[0].shuffle_special_interior_entrances) or \
-       (entrance_placed != None and entrance_placed.type in ['SpecialInterior', 'Overworld']):
+    if entrance_placed == None or entrance_placed.type in ['SpecialInterior', 'Overworld'] or \
+       entrance_placed.connected_region.name == 'Castle Town Rupee Room' or \
+       (entrance_placed.reverse and entrance_placed.reverse.connected_region and \
+            entrance_placed.reverse.connected_region.name == 'Castle Town Rupee Room'):
+
         if not locations_to_ensure_reachable:
             max_playthrough = Playthrough.max_explore([world.state for world in worlds], itempool)
 
@@ -519,16 +522,21 @@ def validate_worlds(worlds, entrance_placed, locations_to_ensure_reachable, item
         time_travel_playthrough.visit_locations()
 
         for world in worlds:
-            # For now, we consider that time of day must always be reachable as both ages without having collected any items (except in closed forest)
-            # In ER, Time of day logic considers that the root always has access to time passing so this is important to ensure
-            if not (any(region for region in time_travel_playthrough.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
-                    any(region for region in time_travel_playthrough.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
-                raise EntranceShuffleError('Guaranteed time passing as both ages')
+            if worlds[0].shuffle_special_interior_entrances:
+                # For now, we consider that time of day must always be reachable as both ages without having collected any items (except in closed forest)
+                # In ER, Time of day logic considers that the root always has access to time passing so this is important to ensure
+                if not (any(region for region in time_travel_playthrough.cached_spheres[-1]['child_regions'] if region.time_passes and region.world == world) and
+                        any(region for region in time_travel_playthrough.cached_spheres[-1]['adult_regions'] if region.time_passes and region.world == world)):
+                    raise EntranceShuffleError('Guaranteed time passing as both ages')
 
-            # When starting as adult, child Link should be able to reach ToT without having collected any items
-            # This is important to ensure that the player never loses access to the pedestal after going child
-            if world.starting_age == 'adult' and not time_travel_playthrough.state_list[world.id].can_reach('Temple of Time', age='child'):
-                raise EntranceShuffleError('Links House to Temple of Time path as child')
+                # When starting as adult, child Link should be able to reach ToT without having collected any items
+                # This is important in order to ensure that the player never loses access to the pedestal after going child
+                if world.starting_age == 'adult' and not time_travel_playthrough.state_list[world.id].can_reach('Temple of Time', age='child'):
+                    raise EntranceShuffleError('Links House to Temple of Time path as child')
+            
+            # The big poe shop should always be reachable as adult to ensure the player can't lose the ability to use normal bottles by catching big poes
+            if not time_travel_playthrough.state_list[world.id].can_reach('Castle Town Rupee Room', age='adult'):
+                raise EntranceShuffleError('Big Poe Shop not guaranteed to be reachable as adult')
     return
 
 
