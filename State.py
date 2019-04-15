@@ -87,11 +87,10 @@ class State(object):
             if tod == 'all':
                 # If a spot is reachable at day and at dampe's time, then it's reachable at all times of day
                 return self.can_reach(spot, tod='day') and self.can_reach(spot, tod='dampe')
+            elif self.can_change_time_to(tod):
+                return self.can_reach(spot)
             else:
-                if self.can_change_time_to(tod):
-                    return self.can_reach(spot)
-                else:
-                    return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
+                return self.with_tod(lambda state: state.can_reach(spot, keep_tod=True), tod)
 
         # Only keep the current time of day state if we actually want to check for reachability at that time of day
         if self.tod != None and not keep_tod:
@@ -132,7 +131,7 @@ class State(object):
         self.recursion_count[age_type] -= 1
 
         # we store true results and qualified false results (i.e. ones not inside a hypothetical)
-        if can_reach or self.recursion_count[age_type] == 0:
+        if self.tod == None and (can_reach or self.recursion_count[age_type] == 0):
             self.region_cache[age_type][spot] = can_reach
 
         return can_reach
@@ -206,7 +205,7 @@ class State(object):
 
     def at_tod(self, tod):
         # When checking for reachability of a night time GS, we force require suns song if the corresponding setting was selected
-        if tod == 'night' and self.current_spot.type == 'GS Token' and self.world.logic_no_night_tokens_without_suns_song:
+        if self.world.logic_no_night_tokens_without_suns_song and tod == 'night' and self.current_spot and self.current_spot.type == 'GS Token':
             return self.can_play('Suns Song')
 
         if self.ensure_tod_access():
@@ -408,7 +407,8 @@ class State(object):
     def has_bombchus_item(self):
         if self.world.bombchus_in_logic:
             return (self.has_any(lambda pritem: pritem.startswith('Bombchus'))
-                    or (self.has('Progressive Wallet') and self.can_reach('Haunted Wasteland', age='either')))
+                    or (self.can_reach('Haunted Wasteland', age='either') and self.has('Progressive Wallet') and 
+                            (self.is_adult() or self.has_sticks() or self.has('Kokiri_Sword'))))
         else:
             return self.has('Bomb Bag')
 
@@ -501,7 +501,7 @@ class State(object):
             # Require certain warp songs based on ER settings to ensure the player doesn't have to savewarp in order to complete the trade quest
             # This is meant to avoid possible logical softlocks until either the trade quest is reworked or a better solution is found
             guaranteed_path = True
-            if self.world.shuffle_overworld_entrances:
+            if self.world.shuffle_special_interior_entrances:
                 guaranteed_path = self.can_play('Prelude of Light')
             elif self.world.shuffle_interior_entrances:
                 colossus_fairy_entrance = self.world.get_entrance('Desert Colossus -> Colossus Fairy')
@@ -605,7 +605,7 @@ class State(object):
     def can_finish_GerudoFortress(self):
         if self.world.gerudo_fortress == 'normal':
             return (self.has('Small Key (Gerudo Fortress)', 4) and
-                    (self.is_adult() or self.has('Kokiri Sword')) and
+                    (self.is_adult() or self.has('Kokiri Sword') or self.is_glitched) and
                     (self.can_use('Bow')
                         or self.can_use('Hookshot')
                         or self.can_use('Hover Boots')

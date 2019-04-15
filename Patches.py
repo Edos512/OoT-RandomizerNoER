@@ -782,6 +782,9 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         # Remove deku sprout and drop player at SFM after forest (SFM blue will then be rewired by ER below)
         rom.write_int16(0xAC9F96, 0x0608)
 
+        #Tell the well water we are always a child.
+        rom.write_int32(0xDD5BF4, 0x00000000)
+
         remove_entrance_blockers(rom)
         #Tell the Deku tree jaw actor we are always a child.
         rom.write_int32(0x0C72C64, 0x240E0000)
@@ -1163,15 +1166,15 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     # Set damage multiplier
     if world.damage_multiplier == 'half':
-        rom.write_int32(0xAE808C, 0x00108043)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), -1)
     if world.damage_multiplier == 'normal':
-        rom.write_int32(0xAE808C, 0x00108000)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 0)
     if world.damage_multiplier == 'double':
-        rom.write_int32(0xAE808C, 0x00108040)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 1)
     if world.damage_multiplier == 'quadruple':
-        rom.write_int32(0xAE808C, 0x00108080)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 2)
     if world.damage_multiplier == 'ohko':
-        rom.write_int32(0xAE808C, 0x00108200)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 3)
 
     # Patch songs and boss rewards
     for location in world.get_filled_locations():

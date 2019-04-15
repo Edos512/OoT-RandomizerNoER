@@ -5,7 +5,6 @@
         "exits": {
             "Kakariko Village": "True",
             "Bottom of the Well Main Area" : "is_child and (can_child_attack or has_nuts)"
-            
         }
     },
     {
@@ -43,7 +42,8 @@
                 (Small_Key_Bottom_of_the_Well, 3)",
             "GS Well Like Like Cage": "
                 (Small_Key_Bottom_of_the_Well, 3) and Boomerang and can_see_with_lens",
-            "Stick Pot": "True"
+            "Stick Pot": "True",
+            "Nut Pot": "True"
         },
         "exits": {
             "Bottom of the Well" : "True"

@@ -53,9 +53,9 @@ class World(object):
         self.keysanity = self.shuffle_smallkeys != 'dungeon'
         self.check_beatable_only = not self.all_reachable
         self.shuffle_dungeon_entrances = self.entrance_shuffle != 'off'
-        self.shuffle_grotto_entrances = self.entrance_shuffle != 'off' and self.entrance_shuffle != 'dungeons'
-        self.shuffle_interior_entrances = self.entrance_shuffle != 'off' and self.entrance_shuffle != 'dungeons'
-        self.shuffle_special_interior_entrances = self.entrance_shuffle == 'all-indoors' or self.entrance_shuffle == 'all'
+        self.shuffle_grotto_entrances = self.entrance_shuffle in ['simple-indoors', 'all-indoors', 'all']
+        self.shuffle_interior_entrances = self.entrance_shuffle in ['simple-indoors', 'all-indoors', 'all']
+        self.shuffle_special_interior_entrances = self.entrance_shuffle in ['all-indoors', 'all']
         self.shuffle_overworld_entrances = self.entrance_shuffle == 'all'
 
         # trials that can be skipped will be decided later

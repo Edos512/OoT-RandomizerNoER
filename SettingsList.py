@@ -612,7 +612,7 @@ setting_infos = [
         gui_params     = {
             'randomize_key': 'randomize_settings',
         },
-        dependency     = lambda settings: True if settings.entrance_shuffle == 'all-indoors' or settings.entrance_shuffle == 'all' else None,
+        dependency     = lambda settings: True if settings.entrance_shuffle in ['all-indoors', 'all'] else None,
     ),
     Checkbutton(
         name           = 'open_kakariko',
@@ -873,7 +873,7 @@ setting_infos = [
             Ganondorf and Ganon will be skipped.
         ''',
         shared         = True,
-        dependency     = lambda settings: True if settings.entrance_shuffle != 'off' and settings.entrance_shuffle != 'dungeons' else None,
+        dependency     = lambda settings: True if settings.entrance_shuffle in ['simple-indoors', 'all-indoors', 'all'] else None,
     ),
     Checkbutton(
         name           = 'no_guard_stealth',
@@ -1124,12 +1124,9 @@ setting_infos = [
             Extended version of 'Simple Indoors' with some extra entrances:
             Windmill, Link's House and Temple of Time.
 
-              'All Indoors & Overworld':
+            'All Indoors & Overworld':
             Same as 'All Indoors' but with Overworld loading zones shuffled
-            in a new separate pool.
-
-            For more information, please refer to the doc linked at the
-            bottom of the first tab.
+            in a new separate pool. Owl drop positions are also randomized.
         ''',
         shared         = True,
         gui_params     = {

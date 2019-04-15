@@ -619,8 +619,6 @@ def generate_itempool(world):
             if drop_location.name == location:
                 world.push_item(drop_location, ItemFactory(item, world))
                 drop_location.locked = True
-    for location in drop_locations:
-        location.name = location.parent_region.name + " " + location.name
 
     # set up item pool
     (pool, placed_items) = get_pool_core(world)

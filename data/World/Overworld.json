@@ -30,10 +30,8 @@
         "locations": {
             "Kokiri Sword Chest": "is_child",
             "GS Kokiri Know It All House": "
-                is_child and can_child_attack and
-                ((shuffle_overworld_entrances and at_night) or 
-                    (not shuffle_overworld_entrances and 
-                        (had_night_start or can_leave_forest or can_play(Suns_Song))))",
+                is_child and can_child_attack and at_night and
+                (had_night_start or can_leave_forest or can_play(Suns_Song))",
             "GS Kokiri Bean Patch": "
                 can_plant_bugs and can_child_attack",
             "GS Kokiri House of Twins": "
@@ -286,7 +284,7 @@
                 is_child and (Boomerang or 
                     (logic_lab_wall_gs and (has_sticks or Kokiri_Sword))) and at_night",
             "GS Lake Hylia Small Island": "is_child and can_child_attack and at_night",
-            "GS Lake Hylia Giant Tree": "can_use(Longshot)",
+            "GS Lake Hylia Giant Tree": "can_use(Longshot) and at_night",
             "Lake Hylia Lab Gossip Stone": "True",
             "Lake Hylia Gossip Stone (Southeast)": "True",
             "Lake Hylia Gossip Stone (Southwest)": "True",
@@ -463,7 +461,8 @@
                 Progressive_Wallet and 
                 (is_adult or has_sticks or Kokiri_Sword)",
             "GS Wasteland Ruins": "can_use(Hookshot) or can_use(Boomerang)",
-            "Fairy Pot": "has_bottle"
+            "Fairy Pot": "has_bottle",
+            "Nut Pot": "True"
         },
         "exits": {
             "Haunted Wasteland Near Colossus": "(logic_lens == 'chest') or can_use(Lens_of_Truth)"
@@ -824,8 +823,8 @@
             "Kakariko Bazaar": "is_adult and at_day",
             "Kakariko Shooting Gallery": "is_adult and at_day",
             "Bottom of the Well": "
-                (is_child and can_reach(Windmill) and can_play(Song_of_Storms)) or 
-                (is_adult and shuffle_dungeon_entrances)",
+                as_child(can_reach(Windmill) and can_play(Song_of_Storms)) and
+                (is_child or shuffle_dungeon_entrances)",
             "Kakariko Potion Shop Front": "is_child or at_day",
             "Kakariko Potion Shop Back": "is_adult and at_day",
             "Odd Medicine Building": "is_adult",
@@ -1189,10 +1188,8 @@
         "hint": "Death Mountain Crater",
         "locations": {
             "DM Crater Wall Freestanding PoH": "True",
-            "GS Death Mountain Crater Crate": "
-                is_child and can_child_attack and as_either_here(can_blast_or_smash)",
-            "DMC Deku Scrub Bombs": "
-                is_child and can_stun_deku and as_either_here(can_blast_or_smash)",
+            "GS Death Mountain Crater Crate": "is_child and can_child_attack",
+            "DMC Deku Scrub Bombs": "is_child and can_stun_deku",
             "Death Mountain Crater Gossip Stone": "has_explosives",
             "Gossip Stone Fairy": "has_explosives and can_summon_gossip_fairy and has_bottle"
         },
@@ -1570,7 +1567,8 @@
             "HF Grotto Cow": "has_fire_source and can_play(Eponas_Song)",
             "Field Valley Grotto Gossip Stone": "has_fire_source",
             "Gossip Stone Fairy": "has_fire_source and can_summon_gossip_fairy and has_bottle",
-            "Bug Shrub": "has_fire_source and can_cut_shrubs and has_bottle"
+            "Bug Shrub": "has_fire_source and can_cut_shrubs and has_bottle",
+            "Nut Pot": "has_fire_source"
         }
     },
     {
@@ -1609,7 +1607,8 @@
             "GS Hyrule Castle Grotto": "can_blast_or_smash and (can_use(Boomerang) or can_use(Hookshot))",
             "Castle Storms Grotto Gossip Stone": "can_blast_or_smash",
             "Gossip Stone Fairy": "can_blast_or_smash and can_summon_gossip_fairy and has_bottle",
-            "Wandering Bugs": "can_blast_or_smash and has_bottle"
+            "Wandering Bugs": "can_blast_or_smash and has_bottle",
+            "Nut Pot": "can_blast_or_smash"
         }
     },
     {
