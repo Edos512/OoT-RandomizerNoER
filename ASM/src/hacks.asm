@@ -517,12 +517,6 @@ nop
 .org 0xD74990
     skip_steal_tunic:
 
-; Meg starts at 1 health
-; Replaces: 
-;   0x0A
-.orga 0xCDE1FC
-    .byte 0x01
-
 ;==================================================================================================
 ; Ocarina Song Cutscene Overrides
 ;==================================================================================================
@@ -1221,3 +1215,68 @@ skip_GS_BGS_text:
 .orga 0xACCD34
     jal     burning_kak
     lw      t9, 0x0000(s0)
+
+; ==================================================================================================
+; Set the Obtained Epona Flag when winning the 2nd Ingo Race
+; ==================================================================================================
+; Replaces: lw      t9, 0x24(s0)
+.orga 0xD52698
+    jal     ingo_race_win
+
+;==================================================================================================
+; Magic Bean Salesman Shuffle
+;==================================================================================================
+; Replaces: addu    v0, v0, t7
+;           lb      v0, -0x59A4(v0)
+.orga 0xE20410
+    jal     bean_initial_check
+    nop
+
+; Replaces: addu    t0, v0, t9
+;           lb      t1, 0x008C(t0)
+.orga 0xE206DC
+    jal     bean_enough_rupees_check
+    nop
+
+; Replaces: addu    t7, t7, t6
+;           lb      t7, -0x59A4(t7)
+.orga 0xE20798
+    jal     bean_rupees_taken
+    nop
+
+; Replaces: sw    a0, 0x20(sp)
+;           sw    a1, 0x24(sp)
+.orga 0xE2076C
+    jal     bean_buy_item_hook
+    sw      a0, 0x20(sp)
+
+;==================================================================================================
+; Load Audioseq using dmadata
+;==================================================================================================
+; Replaces: lui     a1, 0x0003
+;           addiu   a1, a1, -0x6220
+.org 0xB2E82C ; in memory 0x800B88CC
+    lw      a1, 0x8000B188
+
+;==================================================================================================
+; Load Audiotable using dmadata
+;==================================================================================================
+; Replaces: lui     a1, 0x0008
+;           addiu   a1, a1, -0x6B90
+.org 0xB2E854
+    lw      a1, 0x8000B198
+
+; ==================================================================================================
+; Handle grottos shuffled with other entrances
+; ==================================================================================================
+; Replaces: lui     at, 1
+;           addu    at, at, a3
+.orga 0xCF73C8
+    jal     grotto_entrance
+    lui     at, 1
+
+; Replaces: addu    at, at, a3
+;           sh      t6, 0x1E1A(at)
+.orga 0xBD4C58
+    jal     scene_exit_hook
+    addu    at, at, a3

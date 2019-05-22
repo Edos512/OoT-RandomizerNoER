@@ -119,7 +119,9 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     rom.write_bytes(0x1FC0CF8, Block_code)
 
     # songs as items flag
-    songs_as_items = world.shuffle_song_items or world.start_with_fast_travel
+    songs_as_items = world.shuffle_song_items or \
+                     world.start_with_fast_travel or \
+                     world.distribution.song_as_items
 
     # Speed learning Zelda's Lullaby
     rom.write_int32s(0x02E8E90C, [0x000003E8, 0x00000001]) # Terminator Execution
@@ -535,6 +537,12 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     rom.write_bytes(0xE0A176, [0x00, 0x02])
     rom.write_bytes(0xE0A35A, [0x00, 0x01, 0x00, 0x02])
 
+    # Speed up Lake Hylia Owl Flight
+    rom.write_bytes(0x20E60D2, [0x00, 0x01])
+
+    # Speed up Death Mountain Trail Owl Flight
+    rom.write_bytes(0x223B6B2, [0x00, 0x01])
+
     # Poacher's Saw no longer messes up Deku Theater
     rom.write_bytes(0xAE72CC, [0x00, 0x00, 0x00, 0x00])
 
@@ -571,7 +579,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     # Change Mido, Saria, and Kokiri to check for Deku Tree complete flag
     # bitwise pointer for 0x80
-    kokiriAddresses = [0xE52836, 0xE53A56, 0xE51D4E, 0xE51F3E, 0xE51D96, 0xE51E1E, 0xE51E7E, 0xE51EDE, 0xE51FC6, 0xE51F96, 0xE293B6, 0xE29B8E, 0xE62EDA, 0xE630D6, 0xE62642, 0xE633AA, 0xE6369E]
+    kokiriAddresses = [0xE52836, 0xE53A56, 0xE51D4E, 0xE51F3E, 0xE51D96, 0xE51E1E, 0xE51E7E, 0xE51EDE, 0xE51FC6, 0xE51F96, 0xE293B6, 0xE29B8E, 0xE62EDA, 0xE630D6, 0xE633AA, 0xE6369E]
     for kokiri in kokiriAddresses:
         rom.write_bytes(kokiri, [0x8C, 0x0C])
     # Kokiri
@@ -591,7 +599,6 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     # Mido
     rom.write_bytes(0xE62EDC, [0x94, 0x6F, 0x0E, 0xD4])
     rom.write_bytes(0xE630D8, [0x94, 0x4F, 0x0E, 0xD4])
-    rom.write_bytes(0xE62644, [0x94, 0x6F, 0x0E, 0xD4])
     rom.write_bytes(0xE633AC, [0x94, 0x68, 0x0E, 0xD4])
     rom.write_bytes(0xE636A0, [0x94, 0x48, 0x0E, 0xD4])
 
@@ -605,7 +612,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     # Change Pokey to check DT complete flag
     rom.write_bytes(0xE5400A, [0x8C, 0x4C])
     rom.write_bytes(0xE5400E, [0xB4, 0xA4])
-    if world.open_forest:
+    if world.open_forest != 'closed':
         rom.write_bytes(0xE5401C, [0x14, 0x0B])
 
     # Fix Shadow Temple to check for different rewards for scene
@@ -663,59 +670,77 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     et_original = rom.read_bytes(0xB6FBF0, 4 * 0x0614)
 
-    entrance_updates = []
+    exit_updates = []
 
-    def write_entrance(target_index, data_index, length=4):
-        ti = target_index * 4
-        rom.write_bytes(0xB6FBF0 + data_index * 4, et_original[ti:ti+(4*length)])
+    def copy_entrance_record(source_index, destination_index, count=4):
+        ti = source_index * 4
+        rom.write_bytes(0xB6FBF0 + destination_index * 4, et_original[ti:ti+(4 * count)])
 
-    def write_scene_exit(target_index, data_index, scene_start, scene_data):
-        start_count = 0
-        current = scene_data
-        command = 0
-        while command != 0x14:
-            command = rom.read_byte(current)
-            if command == 0x00:
-                start_count = rom.read_byte(current + 1)
-            current = current + 8
-        command = 0
-        current = scene_data
-        while command != 0x14:
-            command = rom.read_byte(current)
-            if command == 0x13:
-                entrance_list = scene_start + (rom.read_int32(current + 4) & 0x00FFFFFF)
-                for _ in range (0, start_count):
-                    entrance = rom.read_int16(entrance_list)
-                    if (entrance == data_index):
-                        entrance_updates.append((entrance_list, target_index))
-                    entrance_list = entrance_list + 2
-            if command == 0x18: # Alternate header list
-                header_list = scene_start + (rom.read_int32(current + 4) & 0x00FFFFFF)
-                for alt_id in range(0,3):
-                    header_offset = rom.read_int32(header_list) & 0x00FFFFFF
-                    if header_offset != 0:
-                        write_scene_exit(target_index, data_index, scene_start, scene_start + header_offset)
-                    header_list = header_list + 4
-            current = current + 8
+    def generate_exit_lookup_table():
+        # Assumes that the last exit on a scene's exit list cannot be 0000
+        exit_table = {
+            0x0028: [0xAC95C2] #Jabu with the fish is entered from a cutscene hardcode
+            }
 
-    def write_scenes_exits(target_index, data_index):
+        def add_scene_exits(scene_start, offset = 0):
+            current = scene_start + offset
+            exit_list_start_off = 0
+            exit_list_end_off = 0
+            command = 0
+
+            while command != 0x14:
+                command = rom.read_byte(current)
+                if command == 0x18: # Alternate header list
+                    header_list = scene_start + (rom.read_int32(current + 4) & 0x00FFFFFF)
+                    for alt_id in range(0,3):
+                        header_offset = rom.read_int32(header_list) & 0x00FFFFFF
+                        if header_offset != 0:
+                            add_scene_exits(scene_start, header_offset)
+                        header_list += 4
+                if command == 0x13: # Exit List
+                    exit_list_start_off = rom.read_int32(current + 4) & 0x00FFFFFF
+                if command == 0x0F: # Lighting list, follows exit list
+                    exit_list_end_off = rom.read_int32(current + 4) & 0x00FFFFFF
+                current += 8
+            
+            if exit_list_start_off == 0 or exit_list_end_off == 0:
+                return
+
+            # calculate the exit list length
+            list_length = (exit_list_end_off - exit_list_start_off) // 2
+            last_id = rom.read_int16(scene_start + exit_list_end_off - 2)
+            if last_id == 0:
+                list_length -= 1
+
+            # update 
+            addr = scene_start + exit_list_start_off
+            for _ in range(0, list_length):
+                index = rom.read_int16(addr)
+                if index not in exit_table:
+                    exit_table[index] = []
+                exit_table[index].append(addr)
+                addr += 2
+
         scene_table = 0x00B71440
         for scene in range(0x00, 0x65):
-            #really hacky
-            if data_index == 0 and scene != 0x55:
-                continue
             scene_start = rom.read_int32(scene_table + (scene * 0x14));
-            write_scene_exit(target_index, data_index, scene_start, scene_start)
+            add_scene_exits(scene_start)
+            
+        return exit_table
 
-        #Special case: Jabu with the fish is entered from a cutscene hardcode
-        if data_index == 0x0028:
-            entrance_updates.append((0xAC95C2, target_index))
 
     def set_entrance_updates(entrances):
         for entrance in entrances:
             new_entrance = entrance.data
             replaced_entrance = entrance.replaces.data
-            write_scenes_exits(replaced_entrance['index'], new_entrance['index'])
+
+            if entrance.replaces.type == 'Grotto':
+                if entrance.replaces.primary:
+                    replaced_entrance['index'] = 0x1000 + replaced_entrance['grotto_id']
+                else:
+                    replaced_entrance['index'] = 0x7FFF
+
+            exit_updates.append((new_entrance['index'], replaced_entrance['index']))
 
             if "dynamic_address" in new_entrance:
                 # Dynamic exits are special and have to be set on a specific address
@@ -734,41 +759,45 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
                 # vanilla as it never took you to the exit and the lake fill is handled
                 # above by removing the cutscene completely. Child has problems with Adult
                 # blue warps, so always use the return entrance if a child.
-                write_entrance(blue_out_data + 2, new_entrance["blue_warp"] + 2, 2)
-                write_entrance(replaced_entrance["index"], new_entrance["blue_warp"], 2)
+                copy_entrance_record(blue_out_data + 2, new_entrance["blue_warp"] + 2, 2)
+                copy_entrance_record(replaced_entrance["index"], new_entrance["blue_warp"], 2)
+
+        
+    exit_table = generate_exit_lookup_table()
 
     if world.shuffle_overworld_entrances:
         # Prevent the ocarina cutscene from leading straight to hyrule field
-        symbol = rom.sym('OCARINAS_SHUFFLED')
-        rom.write_byte(symbol, 1)
+        rom.write_byte(rom.sym('OCARINAS_SHUFFLED'), 1)
 
-        # Patch all LLR exits by leaping over a fence to lead to the main LLR exit
-        main_entrance = 0x01F9 # Hyrule Field entrance from Lon Lon Ranch (main land entrance)
-        ranch_leap_entrances = [0x028A, 0x028E, 0x0292, 0x0476] # Southern, Western, Eastern, Front Gate
-        for entrance_idx in ranch_leap_entrances:
-            write_scenes_exits(main_entrance, entrance_idx)
+        # Disable the fog state entirely to avoid fog glitches
+        rom.write_byte(rom.sym('NO_FOG_STATE'), 1)
 
-        # Patch the water exits between Hyrule Field and Zora River to lead to the land entrance instead of the water entrance
-        write_scenes_exits(0x00EA, 0x01D9) # Hyrule Field -> Zora River
-        write_scenes_exits(0x0181, 0x0311) # Zora River -> Hyrule Field
+        # Combine all fence hopping LLR exits to lead to the main LLR exit
+        for k in [0x028A, 0x028E, 0x0292]: # Southern, Western, Eastern Gates
+            exit_table[0x01F9] += exit_table[k] # Hyrule Field entrance from Lon Lon Ranch (main land entrance)
+            del exit_table[k]
+        exit_table[0x01F9].append(0xD52722) # 0x0476, Front Gate
 
-        for entrance, target in entrance_updates:
-            rom.write_int16(entrance, target)
-        entrance_updates = []
+        # Combine the water exits between Hyrule Field and Zora River to lead to the land entrance instead of the water entrance
+        exit_table[0x00EA] += exit_table[0x01D9] # Hyrule Field -> Zora River
+        exit_table[0x0181] += exit_table[0x0311] # Zora River -> Hyrule Field
+        del exit_table[0x01D9]
+        del exit_table[0x0311]
 
-        # Change Impa escort to bring link at the hyrule castle grounds entrance from market, instead of hyrule field
-        write_entrance(0x0138, 0x0594) # After Impa escort (overridden to Hyrule Castle entrance from Market)
+        # Change Impa escorts to bring link at the hyrule castle grounds entrance from market, instead of hyrule field
+        rom.write_int16(0xACAA2E, 0x0138) # 1st Impa escort
+        rom.write_int16(0xD12D6E, 0x0138) # 2nd+ Impa escort
 
         # Change Getting caught cutscene as adult without hookshot to keep Link inside the Fortress
-        write_entrance(0x0129, 0x01A5 + 2, 2) # Thrown out of fortress as adult (overridden to Gerudo Fortress entrance from Valley)
+        copy_entrance_record(0x0129, 0x01A5 + 2, 2) # Thrown out of fortress as adult (overridden to Gerudo Fortress entrance from Valley)
 
         # Change Getting caught cutscene as child to always throw Link in the stream
-        write_entrance(0x01A5, 0x03B4, 2) # Captured with hookshot 1st time as child (overridden to Thrown out of fortress)
-        write_entrance(0x01A5, 0x05F8, 2) # Captured with hookshot 2nd time as child (overridden to Thrown out of fortress)
+        copy_entrance_record(0x01A5, 0x03B4, 2) # Captured with hookshot 1st time as child (overridden to Thrown out of fortress)
+        copy_entrance_record(0x01A5, 0x05F8, 2) # Captured with hookshot 2nd time as child (overridden to Thrown out of fortress)
 
-        # Patch Owl Drop entrances to their new indexes
+        # Change hardcoded Owl Drop entrance indexes to their new indexes (cutscene hardcodes)
         for entrance in world.get_shuffled_entrances(type='OwlDrop'):
-            write_entrance(entrance.replaces.data['index'], entrance.data['index'])
+            rom.write_int16(entrance.data['code_address'], entrance.replaces.data['index'])
 
         set_entrance_updates(world.get_shuffled_entrances(type='Overworld'))
 
@@ -804,13 +833,17 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         # Disable trade quest timers
         rom.write_byte(rom.sym('DISABLE_TIMERS'), 0x01)
 
-        set_entrance_updates(world.get_shuffled_entrances(type='Interior'))
+        # Change the Happy Mask Shop "throw out" entrance index to the new one (hardcode located in the shop actor)
+        rom.write_int16(0xC6DA5E, world.get_entrance('Castle Town Mask Shop -> Castle Town').replaces.data['index'])
 
-    if world.shuffle_special_interior_entrances:
-        set_entrance_updates(world.get_shuffled_entrances(type='SpecialInterior'))
+        set_entrance_updates(world.get_shuffled_entrances(type='Interior') + world.get_shuffled_entrances(type='SpecialInterior'))
 
-    for entrance, target in entrance_updates:
-        rom.write_int16(entrance, target)
+    if world.shuffle_grotto_entrances:
+        set_entrance_updates(world.get_shuffled_entrances(type='Grave') + world.get_shuffled_entrances(type='SpecialGrave'))
+
+    for k, v in [(k,v) for k, v in exit_updates if k in exit_table]:
+        for addr in exit_table[k]:
+            rom.write_int16(addr, v)
 
     # Fix text for Pocket Cucco.
     rom.write_byte(0xBEEF45, 0x0B)
@@ -830,7 +863,8 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     # Initial Save Data
 
-    save_context.write_bits(0x00D4 + 0x03 * 0x1C + 0x04 + 0x0, 0x08) # Forest Temple switch flag (Poe Sisters cutscene)
+    if not world.useful_cutscenes:
+        save_context.write_bits(0x00D4 + 0x03 * 0x1C + 0x04 + 0x0, 0x08) # Forest Temple switch flag (Poe Sisters cutscene)
     save_context.write_bits(0x00D4 + 0x05 * 0x1C + 0x04 + 0x1, 0x01) # Water temple switch flag (Ruto)
     save_context.write_bits(0x00D4 + 0x51 * 0x1C + 0x04 + 0x2, 0x08) # Hyrule Field switch flag (Owl)
     save_context.write_bits(0x00D4 + 0x55 * 0x1C + 0x04 + 0x0, 0x80) # Kokiri Forest switch flag (Owl)
@@ -843,6 +877,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     save_context.write_bits(0x0ED4, 0x10) # "Met Deku Tree"
     save_context.write_bits(0x0ED5, 0x20) # "Deku Tree Opened Mouth"
     save_context.write_bits(0x0ED6, 0x08) # "Rented Horse From Ingo"
+    save_context.write_bits(0x0ED6, 0x10) # "Spoke to Mido After Deku Tree's Death"
     save_context.write_bits(0x0EDA, 0x08) # "Began Nabooru Battle"
     save_context.write_bits(0x0EDC, 0x80) # "Entered the Master Sword Chamber"
     save_context.write_bits(0x0EDD, 0x20) # "Pulled Master Sword from Pedestal"
@@ -855,7 +890,8 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     save_context.write_bits(0x0EF9, 0x01) # "Greeted by Saria"
     save_context.write_bits(0x0F0A, 0x04) # "Spoke to Ingo Once as Adult"
     save_context.write_bits(0x0F0F, 0x40) # "Met Poe Collector in Ruined Market"
-    save_context.write_bits(0x0F1A, 0x04) # "Met Darunia in Fire Temple"
+    if not world.useful_cutscenes:
+        save_context.write_bits(0x0F1A, 0x04) # "Met Darunia in Fire Temple"
 
     save_context.write_bits(0x0ED7, 0x01) # "Spoke to Child Malon at Castle or Market"
     save_context.write_bits(0x0ED7, 0x20) # "Spoke to Child Malon at Ranch"
@@ -869,7 +905,8 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     save_context.write_bits(0x0EE2, 0x01) # "Began Ganondorf Battle"
     save_context.write_bits(0x0EE3, 0x80) # "Began Bongo Bongo Battle"
     save_context.write_bits(0x0EE3, 0x40) # "Began Barinade Battle"
-    save_context.write_bits(0x0EE3, 0x20) # "Began Twinrova Battle"
+    if not world.useful_cutscenes:
+        save_context.write_bits(0x0EE3, 0x20) # "Began Twinrova Battle"
     save_context.write_bits(0x0EE3, 0x10) # "Began Morpha Battle"
     save_context.write_bits(0x0EE3, 0x08) # "Began Volvagia Battle"
     save_context.write_bits(0x0EE3, 0x04) # "Began Phantom Ganon Battle"
@@ -897,9 +934,17 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     save_context.write_bits(0x0EEB, 0x01) # "Entered Dodongo's Cavern"
     save_context.write_bits(0x0F08, 0x08) # "Entered Hyrule Castle"
 
+    if world.fast_chickens:
+        # save_context.write_bits(0x0F2A, 0x08) # "Caught Cucco Near Cucco Pen"
+        save_context.write_bits(0x0F2A, 0x02) # "Caught Cucco Near Hyrule Field Entrance"
+        save_context.write_bits(0x0F2A, 0x04) # "Caught Cucco Near Bazaar"
+        save_context.write_bits(0x0F2A, 0x10) # "Caught Cucco Behind Windmill"
+        save_context.write_bits(0x0F2A, 0x20) # "Caught Cucco In Crate"
+        save_context.write_bits(0x0F2A, 0x40) # "Caught Cucco Near Skulltula House"
+        save_context.write_bits(0x0F2A, 0x80) # "Caught Cucco Behind Potion Shop"
+
     # Make the Kakariko Gate not open with the MS
-    if not world.open_kakariko:
-        rom.write_int32(0xDD3538, 0x34190000) # li t9, 0
+    rom.write_int32(0xDD3538, 0x34190000) # li t9, 0
 
     if world.open_fountain:
         save_context.write_bits(0x0EDB, 0x08) #Move king zora
@@ -924,7 +969,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     elif world.bridge == 'tokens':
         rom.write_int32(symbol, 5)
 
-    if world.open_forest:
+    if world.open_forest == 'open':
         save_context.write_bits(0xED5, 0x10) # "Showed Mido Sword & Shield"
 
     if world.open_door_of_time:
@@ -977,10 +1022,15 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
             save_context.addresses['dungeon_items'][dungeon]['compass'].value = True
             save_context.addresses['dungeon_items'][dungeon]['map'].value = True
 
+    if world.shuffle_smallkeys == 'vanilla':
+        if world.dungeon_mq['Spirit Temple']:
+            save_context.addresses['keys']['spirit'].value = 3
+
     if world.start_with_wallet:
         world.distribution.give_item('Progressive Wallet', 3)
     if world.start_with_rupees:
         world.distribution.give_item('Rupees', 999)
+        rom.write_byte(rom.sym('MAX_RUPEES'), 0x01)
     if world.start_with_deku_equipment:
         if world.shopsanity == "off":
             world.distribution.give_item('Deku Shield')
@@ -1174,7 +1224,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     # Set damage multiplier
     if world.damage_multiplier == 'half':
-        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), -1)
+        rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 0xFF)
     if world.damage_multiplier == 'normal':
         rom.write_byte(rom.sym('CFG_DAMAGE_MULTIPLYER'), 0)
     if world.damage_multiplier == 'double':
@@ -1389,6 +1439,13 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         update_message_by_id(messages, text_id, message)
 
     if world.shuffle_grotto_entrances:
+        # Build the Grotto Load Table based on grotto entrance data
+        for entrance in world.get_shuffled_entrances(type='Grotto'):
+            if entrance.primary:
+                load_table_pointer = rom.sym('GROTTO_LOAD_TABLE') + 4 * entrance.data['grotto_id']
+                rom.write_int16(load_table_pointer, entrance.data['entrance'])
+                rom.write_byte(load_table_pointer + 2, entrance.data['content'])
+
         # Update grotto actors based on their new entrance
         set_grotto_shuffle_data(rom, world)
 
@@ -1397,6 +1454,15 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         #Moves the cow in LLR Tower, as the two cows are too close in vanilla
         rom.write_bytes(0x33650CA, [0xFE, 0xD3, 0x00, 0x00, 0x00, 0x6E, 0x00, 0x00, 0x4A, 0x34])
         set_cow_id_data(rom, world)
+
+    if world.shuffle_beans:
+        rom.write_byte(rom.sym('SHUFFLE_BEANS'), 0x01)
+        # Update bean salesman messages to better fit the fact that he sells a randomized item
+        update_message_by_id(messages, 0x405E, "\x1AChomp chomp chomp...\x01We have... \x05\x41a mysterious item\x05\x40! \x01Do you want it...huh? Huh?\x04\x05\x41\x0860 Rupees\x05\x40 and it's yours!\x01Keyahahah!\x01\x1B\x05\x42Yes\x01No\x05\x40\x02")
+        update_message_by_id(messages, 0x4069, "You don't have enough money.\x01I can't sell it to you.\x01Chomp chomp...\x02")
+        update_message_by_id(messages, 0x406C, "We hope you like it!\x01Chomp chomp chomp.\x02")
+        # Change first magic bean to cost 60 (is used as the price for the one time item when beans are shuffled)
+        rom.write_byte(0xE209FD, 0x3C)
 
     if world.shuffle_smallkeys == 'remove' or world.shuffle_bosskeys == 'remove':
         locked_doors = get_locked_doors(rom, world)
@@ -1740,46 +1806,30 @@ def set_cow_id_data(rom, world):
 
 
 def set_grotto_shuffle_data(rom, world):
-    def get_grotto_data(rom, actor_id, actor, scene):
-        if actor_id == 0x009B: #Grotto
-            actor_zrot = rom.read_int16(actor + 12)
-            actor_var = rom.read_int16(actor + 14)
-
-            grotto_table[actor] = {
-                'id': (scene << 16) + actor_var,
-                'scene': (actor_var >> 8) & 0xF0,
-                'entrance': actor_zrot & 0x00FF,
-                'content': actor_var & 0x00FF,
-            }
-
     def override_grotto_data(rom, actor_id, actor, scene):
         if actor_id == 0x009B: #Grotto
             actor_zrot = rom.read_int16(actor + 12)
             actor_var = rom.read_int16(actor + 14)
             grotto_type = (actor_var >> 8) & 0x0F
+            grotto_id = (scene << 8) + (actor_var & 0x00FF)
 
-            grotto_data = grotto_override_table[actor]
-            rom.write_byte(actor + 14, grotto_type + grotto_data['scene'])
-            rom.write_byte(actor + 13, grotto_data['entrance'])
-            rom.write_byte(actor + 15, grotto_data['content'])
-
-    # Retrieve the original grotto data
-    grotto_table = {}
-    get_actor_list(rom, get_grotto_data)
+            rom.write_int16(actor + 12, grotto_entrances_override[grotto_id])
+            rom.write_byte(actor + 14, grotto_type + 0x20)
 
     # Build the override table based on shuffled grotto entrances
-    shuffled_grotto_table = {}
+    grotto_entrances_override = {}
     for entrance in world.get_shuffled_entrances(type='Grotto'):
-        grotto_id = (entrance.data['scene'] << 16) + entrance.data['grotto_var']
-        grotto_override_id = (entrance.replaces.data['scene'] << 16) + entrance.replaces.data['grotto_var']
-        shuffled_grotto_table[grotto_id] = grotto_override_id
+        if entrance.primary:
+            grotto_id = (entrance.data['scene'] << 8) + entrance.data['content']
+            if entrance.replaces.type == 'Grotto':
+                grotto_entrances_override[grotto_id] = 0x1000 + entrance.replaces.data['grotto_id']
+            else:
+                grotto_entrances_override[grotto_id] = entrance.replaces.data['index']
+        else:
+            exit_index = entrance.replaces.data.get('index', 0x7FFF)
+            rom.write_int16(rom.sym('GROTTO_EXIT_LIST') + 2 * entrance.data['grotto_id'], exit_index)
 
-    grotto_override_table = {}
-    for actor in grotto_table:
-        grotto_id = grotto_table[actor]['id']
-        grotto_override_table[actor] = next(filter(lambda grotto_data: grotto_data['id'] == shuffled_grotto_table[grotto_id], grotto_table.values()))
-
-    # Override grotto actors data with the new table
+    # Override grotto actors data with the new data
     get_actor_list(rom, override_grotto_data)
 
 
