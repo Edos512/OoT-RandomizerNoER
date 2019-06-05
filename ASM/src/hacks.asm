@@ -1182,17 +1182,13 @@ skip_GS_BGS_text:
     .byte 0xFF ; Set generic grotto text ID to load from grotto ID
 
 ; ==================================================================================================
-; Disable timers 
+; Disable trade quest timers in ER
 ; ==================================================================================================
 ; Replaces: lui     at, 0x800F
 ;           sw      r0, 0x753C(at)
 .orga 0xAE986C ; in memory 8007390C
     j   disable_trade_timers
     lui at, 0x800F
-
-.orga 0xE7C398
-    jal disable_collapse_timer
-    nop
 
 ; ==================================================================================================
 ; Remove Shooting gallery actor when entering the room with the wrong age
@@ -1280,3 +1276,24 @@ skip_GS_BGS_text:
 .orga 0xBD4C58
     jal     scene_exit_hook
     addu    at, at, a3
+
+; ==================================================================================================
+; Getting Caught by Gerudo NPCs in ER
+; ==================================================================================================
+; Replaces: lui     at, 0x0001
+;           addu    at, at, a1
+.orga 0xE11F90  ; White-clothed Gerudo
+    jal     gerudo_caught_entrance
+    nop
+.orga 0xE9F678  ; Patrolling Gerudo
+    jal     gerudo_caught_entrance
+    nop
+.orga 0xE9F7A8  ; Patrolling Gerudo
+    jal     gerudo_caught_entrance
+    nop
+
+; Replaces: lui     at, 0x0001
+;           addu    at, at, v0
+.orga 0xEC1120  ; Gerudo Fighter
+    jal     gerudo_caught_entrance
+    nop

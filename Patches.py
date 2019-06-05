@@ -431,10 +431,6 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         symbol = rom.sym('OCARINAS_SHUFFLED')
         rom.write_byte(symbol,0x01)
 
-    if world.child_lake_hylia_control:
-        symbol = rom.sym('CFG_CHILD_CONTROL_LAKE')
-        rom.write_byte(symbol,0x01)
-
     # Speed Zelda Light Arrow cutscene
     rom.write_bytes(0x2531B40, [0x00, 0x28, 0x00, 0x01, 0x00, 0x02, 0x00, 0x02])
     rom.write_bytes(0x2532FBC, [0x00, 0x75])
@@ -766,6 +762,8 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     exit_table = generate_exit_lookup_table()
 
     if world.shuffle_overworld_entrances:
+        rom.write_byte(rom.sym('OVERWORLD_SHUFFLED'), 1)
+
         # Prevent the ocarina cutscene from leading straight to hyrule field
         rom.write_byte(rom.sym('OCARINAS_SHUFFLED'), 1)
 
@@ -788,13 +786,6 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         rom.write_int16(0xACAA2E, 0x0138) # 1st Impa escort
         rom.write_int16(0xD12D6E, 0x0138) # 2nd+ Impa escort
 
-        # Change Getting caught cutscene as adult without hookshot to keep Link inside the Fortress
-        copy_entrance_record(0x0129, 0x01A5 + 2, 2) # Thrown out of fortress as adult (overridden to Gerudo Fortress entrance from Valley)
-
-        # Change Getting caught cutscene as child to always throw Link in the stream
-        copy_entrance_record(0x01A5, 0x03B4, 2) # Captured with hookshot 1st time as child (overridden to Thrown out of fortress)
-        copy_entrance_record(0x01A5, 0x05F8, 2) # Captured with hookshot 2nd time as child (overridden to Thrown out of fortress)
-
         # Change hardcoded Owl Drop entrance indexes to their new indexes (cutscene hardcodes)
         for entrance in world.get_shuffled_entrances(type='OwlDrop'):
             rom.write_int16(entrance.data['code_address'], entrance.replaces.data['index'])
@@ -802,9 +793,6 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         set_entrance_updates(world.get_shuffled_entrances(type='Overworld'))
 
     if world.shuffle_dungeon_entrances:
-        symbol = rom.sym('CFG_CHILD_CONTROL_LAKE')
-        rom.write_int32(symbol, 1)
-
         # Connect lake hylia fill exit to revisit exit (Hylia blue will then be rewired below)
         rom.write_int16(0xAC995A, 0x060C)
 
@@ -813,6 +801,11 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
         #Tell the well water we are always a child.
         rom.write_int32(0xDD5BF4, 0x00000000)
+
+        #Tell Sheik at Ice Cavern we are always an Adult
+        rom.write_int32(0xC7B9C0, 0x00000000)
+        rom.write_int32(0xC7BAEC, 0x00000000)
+        rom.write_int32(0xc7BCA4, 0x00000000)
 
         #Make the Adult well blocking stone dissappear if the well has been drained by
         #checking the well drain event flag instead of links age. This actor doesn't need a
@@ -1061,6 +1054,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         save_context.addresses['equip_items']['master_sword'].value = True  # Equip Master Sword by default
         save_context.addresses['equip_items']['kokiri_tunic'].value = True  # Equip Kokiri Tunic & Kokiri Boots by default
         save_context.addresses['equip_items']['kokiri_boots'].value = True  # (to avoid issues when going back child for the first time)
+        save_context.write_byte(0x0F33, 0x00)                               # Unset Swordless Flag (to avoid issues with sword getting unequipped)
 
     # Revert change that Skips the Epona Race
     if not world.no_epona_race:
