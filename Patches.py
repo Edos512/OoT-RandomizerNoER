@@ -649,6 +649,14 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
     for address in Suns_scenes:
         rom.write_byte(address,0x01)
 
+    # Allow Warp Songs in additional places
+    rom.write_byte(0xB6D3D2, 0x00) # Gerudo Training Grounds
+    rom.write_byte(0xB6D42A, 0x00) # Inside Ganon's Castle
+
+    # Allow Farore's Wind in dungeons where it's normally forbidden
+    rom.write_byte(0xB6D3D3, 0x00) # Gerudo Training Grounds
+    rom.write_byte(0xB6D42B, 0x00) # Inside Ganon's Castle
+
     # Remove disruptive text from Gerudo Training Grounds and early Shadow Temple (vanilla)
     Wonder_text = [0x27C00BC, 0x27C00CC, 0x27C00DC, 0x27C00EC, 0x27C00FC, 0x27C010C, 0x27C011C, 0x27C012C, 0x27CE080,
                    0x27CE090, 0x2887070, 0x2887080, 0x2887090, 0x2897070, 0x28C7134, 0x28D91BC, 0x28A60F4, 0x28AE084,
@@ -819,6 +827,10 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
         #Tell the Deku tree jaw actor we are always a child.
         rom.write_int32(0x0C72C64, 0x240E0000)
         rom.write_int32(0x0C72C74, 0x240F0001)
+
+        #Purge temp flags on entrance to spirit from colossus through the front
+        #door.
+        rom.write_byte(0x021862E3, 0xC2)
 
         set_entrance_updates(world.get_shuffled_entrances(type='Dungeon'))
 
@@ -1148,8 +1160,8 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
 
     # Load Message and Shop Data
     messages = read_messages(rom)
-    shop_items = read_shop_items(rom, shop_item_file.start + 0x1DEC)
     remove_unused_messages(messages)
+    shop_items = read_shop_items(rom, shop_item_file.start + 0x1DEC)
 
     # Set Big Poe count to get reward from buyer
     poe_points = world.big_poe_count * 100
@@ -1561,14 +1573,17 @@ def patch_rom(spoiler:Spoiler, world:World, rom:Rom):
        tycoon_message = make_player_message(tycoon_message)
     update_message_by_id(messages, 0x00F8, tycoon_message, 0x23)
 
-    repack_messages(rom, messages)
     write_shop_items(rom, shop_item_file.start + 0x1DEC, shop_items)
+
+    permutation = None
 
     # text shuffle
     if world.text_shuffle == 'except_hints':
-        shuffle_messages(rom, except_hints=True)
+        permutation = shuffle_messages(messages, except_hints=True)
     elif world.text_shuffle == 'complete':
-        shuffle_messages(rom, except_hints=False)
+        permutation = shuffle_messages(messages, except_hints=False)
+        
+    repack_messages(rom, messages, permutation)
 
     # output a text dump, for testing...
     #with open('keysanity_' + str(world.seed) + '_dump.txt', 'w', encoding='utf-16') as f:
