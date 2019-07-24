@@ -1,30 +1,44 @@
 import argparse
 import re
 import math
+import json
 from Cosmetics import get_tunic_color_options, get_navi_color_options, get_sword_color_options, get_gauntlet_color_options, get_magic_color_options, get_heart_color_options
 from Location import LocationIterator
 import Sounds as sfx
+from Utils import data_path
 
 # holds the info for a single setting
 class Setting_Info():
 
 
-    def __init__(self, name, type, shared, choices, default=None, dependency=None, gui_params=None,exclude_random=False,affected="",max_rando=False):
+
+    def __init__(self, name, type, gui_text, gui_type, shared, choices, default=None, disabled_default=None, disable=None, gui_tooltip=None, gui_params=None,exclude_random=False,affected="",max_rando=False):
 
         self.name = name # name of the setting, used as a key to retrieve the setting's value everywhere
-        self.type = type # type of the setting's value, used to properly convert types in GUI code
-        self.bitwidth = self.calc_bitwidth(choices) # number of bits needed to store the setting, used in converting settings to a string
+        self.type = type # type of the setting's value, used to properly convert types to setting strings
         self.shared = shared # whether or not the setting is one that should be shared, used in converting settings to a string
+
+        self.gui_text = gui_text
+        self.gui_type = gui_type
+        if gui_tooltip is None:
+            self.gui_tooltip = ""
+        else:
+            self.gui_tooltip = gui_tooltip
 
         if gui_params == None:
             gui_params = {}
         self.gui_params = gui_params # additional parameters that the randomizer uses for the gui
-        self.dependency = dependency # lambda that determines if the setting is enabled in the gui
+
         self.exclude_random = exclude_random # whether or not the setting is excluded by randomize settings buttons (only shared=true)
         self.max_rando=max_rando; # Boolean indicating if the setting is a limiter to the random settings function
         self.affected=affected; # String indicating which original setting the limiter affects.
         
         
+
+        self.disable = disable # dictionary of settings this this setting disabled
+        self.dependency = None # lambda the determines if this is disabled. Generated later
+
+
         # dictionary of options to their text names
         if isinstance(choices, list):
             self.choices = {k: k for k in choices}
@@ -34,11 +48,16 @@ class Setting_Info():
             self.choice_list = list(choices.keys())
         self.reverse_choices = {v: k for k, v in self.choices.items()}
 
+        # number of bits needed to store the setting, used in converting settings to a string
         if shared:
-            self.bitwidth = self.calc_bitwidth(choices)
+            if self.gui_params.get('min') and self.gui_params.get('max') and not choices:
+                self.bitwidth = math.ceil(math.log(self.gui_params.get('max') - self.gui_params.get('min') + 1, 2))
+            else:
+                self.bitwidth = self.calc_bitwidth(choices)
         else:
             self.bitwidth = 0
 
+        # default value if undefined/unset
         if default != None:
             self.default = default
         elif self.type == bool:
@@ -50,6 +69,13 @@ class Setting_Info():
         elif self.type == list:
             self.default = []
 
+        # default value if disabled
+        if disabled_default == None:
+            self.disabled_default = self.default
+        else:
+            self.disabled_default = disabled_default
+
+        # used to when random options are set for this setting
         if 'distribution' not in gui_params:
             self.gui_params['distribution'] = [(choice, 1) for choice in self.choice_list]
 
@@ -66,52 +92,37 @@ class Setting_Info():
 class Checkbutton(Setting_Info):
 
 
-    def __init__(self, name, gui_text=None, gui_group=None,
-            gui_tooltip=None, dependency=None, default=False,
-            shared=False, gui_params=None,exclude_random=False,affected="",max_rando=False):
+    def __init__(self, name, gui_text, gui_tooltip=None, disable=None, 
+            disabled_default=None, default=False, shared=False, gui_params=None,exclude_random=False,affected="",max_rando=False):
 
 
         choices = {
             True:  'checked',
             False: 'unchecked',
         }
-        if gui_params == None:
-            gui_params = {}       
-        gui_params['widget'] = 'Checkbutton'
-        if gui_text       is not None: gui_params['text']       = gui_text
-        if gui_group      is not None: gui_params['group']      = gui_group
-        if gui_tooltip    is not None: gui_params['tooltip']    = gui_tooltip
 
 
-        super().__init__(name, bool, shared, choices, default, dependency, gui_params,exclude_random,affected,max_rando)
+        super().__init__(name, bool, gui_text, 'Checkbutton', shared, choices, default, disabled_default, disable, gui_tooltip, gui_params,exclude_random,affected,max_rando)
 
 
 
 class Combobox(Setting_Info):
 
-    def __init__(self, name, choices, default, gui_text=None,
-            gui_group=None, gui_tooltip=None, dependency=None,
-            shared=False, gui_params=None,exclude_random=False,affected="",max_rando=False):
 
+    def __init__(self, name, gui_text, choices, default, gui_tooltip=None, 
+            disable=None, disabled_default=None, shared=False, gui_params=None,exclude_random=False,affected="",max_rando=False):
 
-        if gui_params == None:
-            gui_params = {}       
-        gui_params['widget'] = 'Combobox'
-
-        if gui_text       is not None: gui_params['text']       = gui_text
-        if gui_group      is not None: gui_params['group']      = gui_group
-        if gui_tooltip    is not None: gui_params['tooltip']    = gui_tooltip
-
-
-        super().__init__(name, str, shared, choices, default, dependency, gui_params,exclude_random,affected,max_rando)
+        super().__init__(name, str, gui_text, 'Combobox', shared, choices, default, disabled_default, disable, gui_tooltip, gui_params,exclude_random,affected,max_rando)
 
 
 
 class Scale(Setting_Info):
 
-    def __init__(self, name, min, max, default, step=1,
-            gui_text=None, gui_group=None, gui_tooltip=None,
-            dependency=None, shared=False, gui_params=None,exclude_random=False):
+
+    def __init__(self, name, gui_text, min, max, default, step=1,
+            gui_tooltip=None, disable=None, disabled_default=None, 
+            shared=False, gui_params=None,exclude_random=False):
+
 
         choices = {
             i: str(i) for i in range(min, max+1, step)
@@ -121,34 +132,9 @@ class Scale(Setting_Info):
         gui_params['min']    = min
         gui_params['max']    = max
         gui_params['step']   = step
-        gui_params['widget'] = 'Scale'
-        if gui_text       is not None: gui_params['text']       = gui_text
-        if gui_group      is not None: gui_params['group']      = gui_group
-        if gui_tooltip    is not None: gui_params['tooltip']    = gui_tooltip
 
 
-        super().__init__(name, int, shared, choices, default, dependency, gui_params,exclude_random)
-
-
-def logic_tricks_entry_tooltip(widget, pos):
-    val = widget.get()
-    if val in logic_tricks:
-        text = val + '\n\n' + logic_tricks[val]['tooltip']
-        text = '\n'.join([line.strip() for line in text.splitlines()]).strip()
-        return text
-    else:
-        return None
-
-
-def logic_tricks_list_tooltip(widget, pos):
-    index = widget.index("@%s,%s" % (pos))
-    val = widget.get(index)
-    if val in logic_tricks:
-        text = val + '\n\n' + logic_tricks[val]['tooltip']
-        text = '\n'.join([line.strip() for line in text.splitlines()]).strip()
-        return text
-    else:
-        return None
+        super().__init__(name, int, gui_text, 'Scale', shared, choices, default, disabled_default, disable, gui_tooltip, gui_params,exclude_random)
 
 
 logic_tricks = {
@@ -212,6 +198,22 @@ logic_tricks = {
         'name'    : 'logic_deku_basement_gs',
         'tooltip' : '''\
                     Can be defeated by doing a precise jump slash.
+                    '''},
+    'Deku Tree Basement Webs with Bow': {
+        'name'    : 'logic_deku_b1_webs_with_bow',
+        'tooltip' : '''\
+                    All spider web walls in Deku Tree basement can be burnt
+                    by adult using just a bow shooting through torches. Applies
+                    to the web obstructing the door to the single scrub room,
+                    the web obstrcuting the bombable wall in the back room
+                    and the circular floor web dropping to Gohma.
+
+                    For the cicular web dropping to Gohma, backflip onto the
+                    chest near the torch at the bottom of the vine wall. With a
+                    precise position you can shoot throught the torch to the
+                    right edge of the circular web.
+
+                    This allows complete adult Deku Tree with no fire source.
                     '''},
     'Hammer Rusted Switches Through Walls': {
         'name'    : 'logic_rusted_switches',
@@ -332,6 +334,13 @@ logic_tricks = {
                     curves through the side of the glass block
                     to hit the Gold Skulltula.
                     '''},
+    'Jabu Scrub as Adult with Jump Dive': {
+        'name'    : 'logic_jabu_scrub_jump_dive',
+        'tooltip' : '''\
+                    Standing above the underwater tunnel leading to the scrub,
+                    jump down and swim through the tunnel. This allows adult to
+                    access the scrub with no Scale or Iron Boots.
+                    '''},
     'Jabu MQ Song of Time Block GS with Boomerang': {
         'name'    : 'logic_jabu_mq_sot_gs',
         'tooltip' : '''\
@@ -410,8 +419,8 @@ logic_tricks = {
                     With a specific position and angle, you can
                     backflip over Mido.
                     '''},
-    'Reach Volvagia without Hover Boots or Pillar': {
-        'name'    : 'logic_volvagia_jump',
+    'Fire Temple Boss Door without Hover Boots or Pillar': {
+        'name'    : 'logic_fire_boss_door_jump',
         'tooltip' : '''\
                     The Fire Temple Boss Door can be reached with a precise
                     jump. You must be touching the side wall of the room so
@@ -654,6 +663,16 @@ logic_tricks = {
                     relevant if "Gerudo Training Grounds Left Side Silver Rupees
                     without Hookshot" is enabled.
                     '''},
+    'Water Temple Boss Key Jump Dive': {
+        'name'    : 'logic_water_bk_jump_dive',
+        'tooltip' : '''\
+                    Stand on the very edge of raised corridor leading from the
+                    push block room to the rolling boulder corridor. Face the
+                    gold skulltula on the waterfall and jump over the boulder
+                    corridor floor into the pool of water, swimming right once
+                    underwater. This allows access to the boss key room without
+                    Iron boots. 
+                    '''},
     'Water Temple Cracked Wall with No Additional Items': {
         'name'    : 'logic_water_cracked_wall_nothing',
         'tooltip' : '''\
@@ -664,7 +683,7 @@ logic_tricks = {
                     Cracked Wall with Hover Boots".
                     '''},
     'Water Temple North Basement Ledge with Precise Jump': {
-        'name'    : 'logic_water_north_basement',
+        'name'    : 'logic_water_north_basement_ledge_jump',
         'tooltip' : '''\
                     In the northern basement there's a ledge from where, in
                     vanilla Water Temple, boulders roll out into the room.
@@ -673,6 +692,14 @@ logic_tricks = {
                     be done without them. This trick supersedes "Water Temple
                     Boss Key Chest with Iron Boots" and applies to both
                     Vanilla and Master Quest.
+                    '''},
+    'Water Temple Torch Longshot': {
+        'name'    : 'logic_water_temple_torch_longshot',
+        'tooltip' : '''\
+                    Stand on the eastern side of the central pillar and longshot
+                    the torches on the bottom level. Swim through the corridor
+                    and float up to the top level. This allows access to this
+                    area and lower water levels without Iron Boots.
                     '''},
     'Goron City Leftmost Maze Chest with Hover Boots': {
         'name'    : 'logic_goron_city_leftmost',
@@ -727,71 +754,241 @@ logic_tricks = {
                     Arrows, but you must be very quick, precise,
                     and strategic with how you take your shots.
                     '''},
+    'Second Dampe Race as Child': {
+        'name'    : 'logic_child_dampe_race_poh',
+        'tooltip' : '''\
+                    It is possible to complete the second dampe
+                    race as child in under a minute, but it is
+                    a very strict time limit.
+                    '''},
 }
 
 
 # a list of the possible settings
 setting_infos = [
 
-    # Non-GUI Settings
-    Checkbutton('cosmetics_only'),
-    Checkbutton('check_version'),
-    Setting_Info('distribution_file', str, False, {}),
-    Setting_Info('checked_version', str, False, {}),
-    Setting_Info('rom',             str, False, {}),
-    Setting_Info('output_dir',      str, False, {}),
-    Setting_Info('output_file',     str, False, {}),
-    Setting_Info('seed',            str, False, {}),
-    Setting_Info('patch_file',      str, False, {}),
-    Setting_Info('count',           int, False, {}, 
-        default        = 1,
+    # Web Only Settings
+    Setting_Info(
+        name        = 'web_wad_file',   
+        type        = str, 
+        gui_text    = "WAD File", 
+        gui_type    = "Fileinput", 
+        shared      = False,
+        choices     = {},
+        gui_tooltip = "Your original OoT 1.2 NTSC-U / NTSC-J WAD file (.wad)",
+        gui_params  = {
+            "file_types": [
+                {
+                  "name": "WAD Files",
+                  "extensions": [ "wad" ]
+                },
+                {
+                  "name": "All Files",
+                  "extensions": [ "*" ]
+                }
+            ],
+            "hide_when_disabled": True,
+        }
     ),
-    Scale('world_count', 
-        min            = 1, 
-        max            = 255, 
+    Setting_Info(
+        name        = 'web_common_key_file',   
+        type        = str, 
+        gui_text    = "Wii Common Key File", 
+        gui_type    = "Fileinput", 
+        shared      = False, 
+        choices     = {},
+        gui_tooltip = """\
+            The Wii Common Key is a copyrighted 32 character string needed for WAD encryption.
+            Google to find it! Do not ask on Discord!
+        """,
+        gui_params  = {
+            "file_types": [
+                {
+                  "name": "BIN Files",
+                  "extensions": [ "bin" ]
+                },
+                {
+                  "name": "All Files",
+                  "extensions": [ "*" ]
+                }
+            ],
+            "hide_when_disabled": True,
+        }        
+    ),
+    Setting_Info(
+        name        = 'web_common_key_string',   
+        type        = str, 
+        gui_text    = "Alternatively Enter Wii Common Key", 
+        gui_type    = "Textinput", 
+        shared      = False, 
+        choices     = {},
+        gui_tooltip = """\
+            The Wii Common Key is a copyrighted 32 character string needed for WAD encryption.
+            Google to find it! Do not ask on Discord!
+        """,
+        gui_params  = {
+            "size"               : "full",
+            "max_length"         : 32,
+            "hide_when_disabled" : True,
+        }
+    ),
+    Setting_Info(
+        name        = 'web_wad_channel_id',   
+        type        = str, 
+        gui_text    = "WAD Channel ID", 
+        gui_type    = "Textinput",
+        shared      = False,
+        choices     = {},
+        default     = "OOTE",
+        gui_tooltip = """\
+            4 characters, should end with E to ensure Dolphin compatibility.
+            Note: If you have multiple OoTR WAD files with different Channel IDs installed, the game can crash on a soft reset. Use a Title Deleter to remove old WADs.
+        """,
+        gui_params  = {
+            "size"               : "small",
+            "max_length"         : 4,
+            "no_line_break"      : True,
+            "hide_when_disabled" : True,
+        }
+    ),
+    Setting_Info(
+        name        = 'web_wad_channel_title',   
+        type        = str, 
+        gui_text    = "WAD Channel Title", 
+        gui_type    = "Textinput",
+        shared      = False,
+        choices     = {},
+        default     = "OoTRandomizer",
+        gui_tooltip = "20 characters max",
+        gui_params  = {
+            "size"               : "medium",
+            "max_length"         : 20,
+            "hide_when_disabled" : True,
+        }
+    ),
+    Setting_Info(
+        name       = 'web_output_type',   
+        type       = str, 
+        gui_text   = "Output Type", 
+        gui_type   = "Radiobutton",
+        shared     = False,
+        choices    = {
+            'z64' : ".z64 (N64/Emulator)",
+            'wad' : ".wad (WiiVC)"
+        },
+        gui_params  = {
+            "hide_when_disabled" : True,
+        },        
+        default    = "z64",
+        disable    = {
+            'z64' : {'settings' : [
+                'web_wad_file',
+                'web_common_key_file',
+                'web_common_key_string',
+                'web_wad_channel_id',
+                'web_wad_channel_title']
+            }
+        }
+    ),
+
+
+    # Non-GUI Settings
+    Checkbutton('cosmetics_only', None),
+    Checkbutton('check_version', None),
+    Setting_Info('distribution_file', str, "Distribution File", "Fileinput", False, {},
+        gui_params = {
+            "file_types": [
+                {
+                  "name": "JSON Files",
+                  "extensions": [ "json" ]
+                },
+                {
+                  "name": "All Files",
+                  "extensions": [ "*" ]
+                }
+            ]        
+        }),
+    Setting_Info('checked_version',   str, None, None, False, {}),
+    Setting_Info('rom',               str, "Base ROM", "Fileinput", False, {},
+        gui_params = {
+            "file_types": [
+                {
+                  "name": "ROM Files",
+                  "extensions": [ "z64", "n64" ]
+                },
+                {
+                  "name": "All Files",
+                  "extensions": [ "*" ]
+                }
+            ],
+            "web:hide_when_disabled" : True,
+        }),
+    Setting_Info('output_dir',        str, "Output Directory", "Directoryinput", False, {}),
+    Setting_Info('output_file',       str, None, None, False, {}),
+    Setting_Info('seed',              str, None, None, False, {}),
+    Setting_Info('patch_file',        str, None, None, False, {}),
+    Setting_Info('count',             int, "Generation Count", "Numberinput", False, {}, 
         default        = 1,
+        gui_params = {
+            'min' : 1,
+        }
+    ),
+    Setting_Info('world_count',       int, "Player Count", "Numberinput", True, {}, 
+        default        = 1,
+
         shared         = True,
 	exclude_random = True,
+
+        gui_params = {
+            'min' : 1,
+            'max' : 255,
+            'no_line_break'     : True,
+            'web:max'           : 15,
+            'web:no_line_break' : True,            
+        }
+
     ),
-    Scale('player_num', 
-        min            = 1, 
-        max            = 255, 
+    Setting_Info('player_num',        int, "Player ID", "Numberinput", False, {}, 
         default        = 1,
-        dependency     = lambda settings: 1 if settings.compress_rom in ['None', 'Patch'] else None,
+        gui_params = {
+            'min' : 1,
+            'max' : 255,
+        }
     ),
 
     # GUI Settings
-    Checkbutton(
-        name           = 'repatch_cosmetics',
-        gui_text       = 'Patch Cosmetics',
-        gui_tooltip    = '''\
-                         Enabling this will re-patch cosmetics based on current settings.
-                         Otherwise, it will utilize the cosmetics that are in the patch file.
-                         ''',
-        default        = True,
-        shared         = False,
+    Setting_Info('presets',           str, "", "Presetinput", False, {},
+        default        = "[New Preset]",
+        gui_tooltip    = 'Select a setting preset to apply.',
+    ),
+    Setting_Info('open_output_dir',   str, "Open Output Directory", "Outputdirbutton", False, {}),   
+    Setting_Info('repatch_cosmetics', bool, None, None, False, {},
+        default        = True
     ),
     Checkbutton(
         name           = 'create_spoiler',
         gui_text       = 'Create Spoiler Log',
-        gui_group      = 'rom_tab',
         gui_tooltip    = '''\
                          Enabling this will change the seed.
                          ''',
         default        = True,
+        gui_params     = {
+            'no_line_break' : True,
+        },
         shared         = True,
         exclude_random = True,
     ),
     Checkbutton(
         name           = 'create_cosmetics_log',
         gui_text       = 'Create Cosmetics Log',
-        gui_group      = 'rom_tab',
         default        = True,
-        dependency     = lambda settings: False if settings.compress_rom == 'None' else None,
+        disabled_default = False,
     ),
     Setting_Info(
         name           = 'compress_rom',
         type           = str,
+        gui_text       = "Output Type",
+        gui_type       = "Radiobutton",
         shared         = False,
         choices        = {
             'True':  'Compressed [Stable]',
@@ -800,42 +997,47 @@ setting_infos = [
             'None':  'No Output',
         },
         default        = 'True',
-        gui_params={
-            'text':   'Output Type',
-            'group':  'rom_tab',
-            'widget': 'Radiobutton',
-            'horizontal': True,
-            'tooltip':'''\
-                The first time compressed generation will take a while,
-                but subsequent generations will be quick. It is highly
-                recommended to compress or the game will crash
-                frequently except on real N64 hardware.
+        disable        = {
+            'None'  : {'settings' : ['player_num', 'create_cosmetics_log']},
+            'Patch' : {'settings' : ['player_num']}
+        },
+        gui_tooltip = '''\
+            The first time compressed generation will take a while,
+            but subsequent generations will be quick. It is highly
+            recommended to compress or the game will crash
+            frequently except on real N64 hardware.
 
-                Patch files are used to send the patched data to other
-                people without sending the ROM file.
-            '''
+            Patch files are used to send the patched data to other
+            people without sending the ROM file.
+        ''',
+        gui_params={
+            'horizontal': True
         },
     ),
     Checkbutton(
         name           = 'randomize_settings',
         gui_text       = 'Randomize Main Rule Settings',
-        gui_group      = 'rules_tab',
         gui_tooltip    = '''\
                          Randomizes most Main Rules.
                          ''',
         default        = False,
+        disable        = {
+            True : {
+                'sections' : ['open_section', 'world_section', 'shuffle_section', 'shuffle_dungeon_section'],
+            }
+        },
         shared         = True,
         exclude_random = True,
     ),
     Combobox(
         name           = 'open_forest',
+        gui_text       = 'Forest',
         default        = 'open',
         choices        = {
             'open':        'Open Forest',
             'closed_deku': 'Closed Deku',
             'closed':      'Closed Forest',
             },
-        gui_group      = 'open',
         gui_tooltip    = '''\
             Open Forest: Mido no longer blocks the path to the
             Deku Tree, and the Kokiri boy no longer blocks the path
@@ -852,6 +1054,9 @@ setting_infos = [
             entrances will force this to Closed Deku if selected.
         ''',
         shared         = True,
+        disable        = {
+            'closed' : {'settings' : ['starting_age']}
+        },        
         gui_params     = {
             'randomize_key': 'randomize_settings',
             'distribution': [
@@ -864,7 +1069,6 @@ setting_infos = [
     Checkbutton(
         name           = 'open_door_of_time',
         gui_text       = 'Open Door of Time',
-        gui_group      = 'open',
         gui_tooltip    = '''\
             The Door of Time starts opened instead of needing to
             play the Song of Time. If this is not set, only
@@ -879,7 +1083,6 @@ setting_infos = [
     Checkbutton(
         name           = 'open_fountain',
         gui_text       = 'Open Zora\'s Fountain',
-        gui_group      = 'open',
         gui_tooltip    = '''\
             King Zora starts out as moved. This also removes
             Ruto's Letter from the item pool.
@@ -891,14 +1094,13 @@ setting_infos = [
     ),
     Combobox(
         name           = 'gerudo_fortress',
+        gui_text       = 'Gerudo Fortress',
         default        = 'normal',
         choices        = {
             'normal': 'Default Behavior',
             'fast':   'Rescue One Carpenter',
             'open':   'Open Gerudo Fortress',
         },
-        gui_text       = 'Gerudo Fortress',
-        gui_group      = 'open',
         gui_tooltip    = '''\
             'Rescue One Carpenter': Only the bottom left
             carpenter must be rescued.
@@ -915,6 +1117,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'bridge',
+        gui_text       = 'Rainbow Bridge Requirement',
         default        = 'medallions',
         choices        = {
             'open':       'Always Open',
@@ -924,8 +1127,6 @@ setting_infos = [
             'dungeons':   'All Dungeons',
             'tokens':     '100 Gold Skulltula Tokens'
         },
-        gui_text       = 'Rainbow Bridge Requirement',
-        gui_group      = 'open',
         gui_tooltip    = '''\
             'Always Open': Rainbow Bridge is always present.
             'Vanilla Requirements': Spirit/Shadow Medallions and Light Arrows.
@@ -947,39 +1148,42 @@ setting_infos = [
         },
     ),
     Combobox(
-            name           = 'logic_rules',
-            default        = 'glitchless',
-            choices        = {
-                'glitchless': 'Glitchless',
-                'glitched':   'Glitched',
-                'none':       'No Logic',
-                },
-            gui_text       = 'Logic Rules',
-            gui_group      = 'world',
-            gui_tooltip    = '''\
-                             Sets the rules the logic uses
-                             to determine accessibility.
-        
-                             'Glitchless': No glitches are
-                             required, but may require some
-                             minor tricks
 
-                             'Glitched': Movement oriented
-                             glitches are likely required.
-                             No locations excluded.
-        
-                             'No Logic': All locations are
-                             considered available. May not
-                             be beatable.
-                             ''',
-            shared         = True,
-            exclude_random = True
-            ),
+        name           = 'logic_rules',
+        gui_text       = 'Logic Rules',
+        default        = 'glitchless',
+        choices        = {
+            'glitchless': 'Glitchless',
+            'glitched':   'Glitched',
+            'none':       'No Logic',
+            },
+        gui_tooltip    = '''\
+            Sets the rules the logic uses
+            to determine accessibility.
+
+            'Glitchless': No glitches are
+            required, but may require some
+            minor tricks
+
+            'Glitched': Movement oriented
+            glitches are likely required.
+            No locations excluded.
+
+            'No Logic': All locations are
+            considered available. May not
+            be beatable.
+            ''',
+        disable        = {
+            'glitched'  : {'settings' : ['entrance_shuffle', 'mq_dungeons_random', 'mq_dungeons']},
+            'none'      : {'tabs'     : ['detailed_tab']},
+        },
+        shared         = True,
+         exclude_random = True
+    ),
 
     Checkbutton(
         name           = 'all_reachable',
         gui_text       = 'All Locations Reachable',
-        gui_group      = 'world',
         gui_tooltip    = '''\
             When this option is enabled, the randomizer will
             guarantee that every item is obtainable and every
@@ -992,15 +1196,11 @@ setting_infos = [
             to hold the keys needed to reach them.
         ''',
         default        = True,
-        shared         = True,
-        gui_params     = {
-            'randomize_key': 'randomize_settings',
-        },
+        shared         = True
     ),
     Checkbutton(
         name           = 'bombchus_in_logic',
         gui_text       = 'Bombchus Are Considered in Logic',
-        gui_group      = 'world',
         gui_tooltip    = '''\
             Bombchus are properly considered in logic.
 
@@ -1026,7 +1226,6 @@ setting_infos = [
     Checkbutton(
         name           = 'one_item_per_dungeon',
         gui_text       = 'Dungeons Have One Major Item',
-        gui_group      = 'world',
         gui_tooltip    = '''\
             Dungeons have exactly one major
             item. This naturally makes each
@@ -1049,12 +1248,14 @@ setting_infos = [
     Checkbutton(
         name           = 'trials_random',
         gui_text       = 'Random Number of Ganon\'s Trials',
-        gui_group      = 'open',
         gui_tooltip    = '''\
                          Sets a random number of trials to
                          enter Ganon's Tower.
                          ''',
         shared         = True,
+        disable        = {
+            True : {'settings' : ['trials']}
+        },
         gui_params     = {
             'randomize_key': 'randomize_settings',
             'distribution':  [
@@ -1064,17 +1265,17 @@ setting_infos = [
     ),
     Scale(
         name           = 'trials',
+        gui_text       = "Ganon's Trials Count",
         default        = 6,
         min            = 0,
         max            = 6,
-        gui_group      = 'open',
         gui_tooltip    = '''\
             Trials are randomly selected. If hints are
             enabled, then there will be hints for which
             trials need to be completed.
         ''',
         shared         = True,
-        dependency     = lambda settings: 0 if settings.trials_random else None,
+        disabled_default = 0,
         gui_params     = {
             'randomize_key': 'randomize_settings',
         },
@@ -1082,7 +1283,6 @@ setting_infos = [
     Checkbutton(
         name           = 'no_escape_sequence',
         gui_text       = 'Skip Tower Escape Sequence',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             The tower escape sequence between
             Ganondorf and Ganon will be skipped.
@@ -1092,7 +1292,6 @@ setting_infos = [
     Checkbutton(
         name           = 'no_guard_stealth',
         gui_text       = 'Skip Child Stealth',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             The crawlspace into Hyrule Castle goes
             straight to Zelda, skipping the guards.
@@ -1102,7 +1301,6 @@ setting_infos = [
     Checkbutton(
         name           = 'no_epona_race',
         gui_text       = 'Skip Epona Race',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Epona can be summoned with Epona's Song
             without needing to race Ingo.
@@ -1112,7 +1310,6 @@ setting_infos = [
     Checkbutton(
         name           = 'useful_cutscenes',
         gui_text       = 'Enable Useful Cutscenes',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             The cutscenes of the Poes in Forest Temple,
             Darunia in Fire Temple, and the introduction
@@ -1123,7 +1320,6 @@ setting_infos = [
     Checkbutton(
         name           = 'fast_chests',
         gui_text       = 'Fast Chest Cutscenes',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             All chest animations are fast. If disabled,
             the animation time is slow for major items.
@@ -1134,7 +1330,6 @@ setting_infos = [
     Checkbutton(
         name           = 'logic_no_night_tokens_without_suns_song',
         gui_text       = 'Nighttime Skulltulas Expect Sun\'s Song',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             GS Tokens that can only be obtained
             during the night expect you to have Sun's
@@ -1146,7 +1341,6 @@ setting_infos = [
     Checkbutton(
         name           = 'free_scarecrow',
         gui_text       = 'Free Scarecrow\'s Song',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Pulling out the Ocarina near a
             spot at which Pierre can spawn will
@@ -1157,7 +1351,6 @@ setting_infos = [
     Checkbutton(
         name           = 'start_with_fast_travel',
         gui_text       = 'Start with Fast Travel',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Start the game with Prelude of Light,
             Serenade of Water, and Farore's Wind.
@@ -1170,7 +1363,6 @@ setting_infos = [
     Checkbutton(
         name           = 'start_with_rupees',
         gui_text       = 'Start with Max Rupees',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Start the game with 99 rupees. Wallet upgrades fill wallet.
         ''',
@@ -1179,7 +1371,6 @@ setting_infos = [
     Checkbutton(
         name           = 'start_with_wallet',
         gui_text       = 'Start with Tycoon\'s Wallet',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Start the game with the largest wallet (999 max).
         ''',
@@ -1188,7 +1379,6 @@ setting_infos = [
     Checkbutton(
         name           = 'start_with_deku_equipment',
         gui_text       = 'Start with Deku Equipment',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Start the game with 10 Deku sticks and 20 Deku nuts.
             Additionally, start the game with a Deku shield equipped,
@@ -1199,53 +1389,58 @@ setting_infos = [
     Checkbutton(
         name           = 'chicken_count_random',
         gui_text       = 'Random Cucco Count',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Anju will give a reward for collecting a random
             number of Cuccos.
         ''',
+        disable        = {
+            True : {'settings' : ['chicken_count']}
+        },        
         shared         = True,
     ),
     Scale(
         name           = 'chicken_count',
+        gui_text       = 'Cucco Count',
         default        = 7,
         min            = 0,
         max            = 7,
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             Anju will give a reward for turning
             in the chosen number of Cuccos.
         ''',
-        dependency     = lambda settings: 1 if settings.chicken_count_random else None,
         shared         = True,
+        gui_params     = {
+            'no_line_break': True,
+        },
     ),
     Checkbutton(
         name           = 'big_poe_count_random',
         gui_text       = 'Random Big Poe Target Count',
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             The Poe buyer will give a reward for turning
             in a random number of Big Poes.
         ''',
+        disable        = {
+            True : {'settings' : ['big_poe_count']}
+        },
         shared         = True,
     ),
     Scale(
         name           = 'big_poe_count',
+        gui_text       = "Big Poe Target Count",
         default        = 10,
         min            = 1,
         max            = 10,
-        gui_group      = 'convenience',
         gui_tooltip    = '''\
             The Poe buyer will give a reward for turning
             in the chosen number of Big Poes.
         ''',
-        dependency     = lambda settings: 1 if settings.big_poe_count_random else None,
+        disabled_default = 1,
         shared         = True,
     ),
     Checkbutton(
         name           = 'shuffle_kokiri_sword',
         gui_text       = 'Shuffle Kokiri Sword',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this shuffles the Kokiri Sword into the pool.
 
@@ -1261,7 +1456,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_ocarinas',
         gui_text       = 'Shuffle Ocarinas',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this shuffles the Fairy Ocarina and the Ocarina
             of Time into the pool.
@@ -1278,7 +1472,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_weird_egg',
         gui_text       = 'Shuffle Weird Egg',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this shuffles the Weird Egg from Malon into the pool.
 
@@ -1297,7 +1490,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_gerudo_card',
         gui_text       = 'Shuffle Gerudo Card',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this shuffles the Gerudo Card into the item pool.
 
@@ -1312,7 +1504,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_song_items',
         gui_text       = 'Shuffle Songs with Items',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this shuffles the songs into the rest of the
             item pool.
@@ -1330,7 +1521,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_cows',
         gui_text       = 'Shuffle Cows',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this causes playing Epona's song infront
             of cows to give an item. There are 9 cows, and an
@@ -1345,7 +1535,6 @@ setting_infos = [
     Checkbutton(
         name           = 'shuffle_beans',
         gui_text       = 'Shuffle Magic Beans',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Enabling this adds a pack of 10 beans to the item pool
             and changes the Magic Bean Salesman to sell a random
@@ -1359,6 +1548,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'entrance_shuffle',
+        gui_text       = 'Entrance Shuffle',
         default        = 'off',
         choices        = {
             'off':              'Off',
@@ -1367,8 +1557,6 @@ setting_infos = [
             'all-indoors':      'All Indoors',
             'all':              'All Indoors & Overworld',
         },
-        gui_text       = 'Entrance Shuffle',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Shuffle entrances bidirectionally within different pools.
 
@@ -1402,10 +1590,10 @@ setting_infos = [
                 ('all', 1),
             ],
         },
-        dependency     = lambda settings: 'off' if settings.logic_rules == 'glitched' else None,
     ),
     Combobox(
         name           = 'shuffle_scrubs',
+        gui_text       = 'Scrub Shuffle',
         default        = 'off',
         choices        = {
             'off':     'Off',
@@ -1413,8 +1601,6 @@ setting_infos = [
             'regular': 'On (Expensive)',
             'random':  'On (Random Prices)',
         },
-        gui_text       = 'Scrub Shuffle',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             'Off': Only the 3 Scrubs that give one-time
             items in the vanilla game (PoH, Deku Nut
@@ -1443,6 +1629,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'shopsanity',
+        gui_text       = 'Shopsanity',
         default        = 'off',
         choices        = {
             'off':    'Off',
@@ -1453,8 +1640,6 @@ setting_infos = [
             '4':      'Shuffled Shops (4 Items)',
             'random': 'Shuffled Shops (Random)',
         },
-        gui_text       = 'Shopsanity',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Shop contents are randomized.
             (X Items): Shops have X random non-shop (Special
@@ -1493,14 +1678,13 @@ setting_infos = [
     ),
     Combobox(
         name           = 'tokensanity',
+        gui_text       = 'Tokensanity',
         default        = 'off',
         choices        = {
             'off':      'Off',
             'dungeons': 'Dungeons Only',
             'all':      'All Tokens',
             },
-        gui_text       = 'Tokensanity',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Token reward from Gold Skulltulas are
             shuffled into the pool.
@@ -1521,16 +1705,15 @@ setting_infos = [
     ),
     Combobox(
         name           = 'shuffle_mapcompass',
+        gui_text       = 'Maps & Compasses',
         default        = 'dungeon',
         choices        = {
-            'remove':    'Maps/Compasses: Remove',
-            'startwith': 'Maps/Compasses: Start With',
-            'vanilla':   'Maps/Compasses: Vanilla Locations',
-            'dungeon':   'Maps/Compasses: Dungeon Only',
-            'keysanity': 'Maps/Compasses: Anywhere'
+            'remove':    'Remove',
+            'startwith': 'Start With',
+            'vanilla':   'Vanilla Locations',
+            'dungeon':   'Dungeon Only',
+            'keysanity': 'Anywhere'
         },
-        gui_text       = 'Shuffle Dungeon Items',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             'Remove': Maps and Compasses are removed.
             This will add a small amount of money and
@@ -1561,14 +1744,14 @@ setting_infos = [
     ),
     Combobox(
         name           = 'shuffle_smallkeys',
+        gui_text       = 'Small Keys',
         default        = 'dungeon',
         choices        = {
-            'remove':    'Small Keys: Remove (Keysy)',
-            'vanilla':   'Small Keys: Vanilla Locations',            
-            'dungeon':   'Small Keys: Dungeon Only',
-            'keysanity': 'Small Keys: Anywhere (Keysanity)'
+            'remove':    'Remove (Keysy)',
+            'vanilla':   'Vanilla Locations',            
+            'dungeon':   'Dungeon Only',
+            'keysanity': 'Anywhere (Keysanity)'
         },
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             'Remove': Small Keys are removed. All locked
             doors in dungeons will be unlocked. An easier
@@ -1600,14 +1783,14 @@ setting_infos = [
     ),
     Combobox(
         name           = 'shuffle_bosskeys',
+        gui_text       = 'Boss Keys',
         default        = 'dungeon',
         choices        = {
-            'remove':    'Boss Keys: Remove (Keysy)',
-            'vanilla':   'Boss Keys: Vanilla Locations',            
-            'dungeon':   'Boss Keys: Dungeon Only',
-            'keysanity': 'Boss Keys: Anywhere (Keysanity)',
+            'remove':    'Remove (Keysy)',
+            'vanilla':   'Vanilla Locations',            
+            'dungeon':   'Dungeon Only',
+            'keysanity': 'Anywhere (Keysanity)',
         },
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             'Remove': Boss Keys are removed. All locked
             doors in dungeons will be unlocked. An easier
@@ -1633,10 +1816,61 @@ setting_infos = [
             'randomize_key': 'randomize_settings',
         },
     ),
+    Combobox(
+        name           = 'shuffle_ganon_bosskey',
+        gui_text       = 'Ganon\'s Boss Keys',
+        default        = 'dungeon',
+        choices        = {
+            'remove':          "Remove",
+            'dungeon':         "Dungeon Only",
+            'vanilla':         "Vanilla",
+            'keysanity':       "Anywhere",
+            'lacs_vanilla':    "On LACS: Vanilla",
+            'lacs_medallions': "On LACS: Medallions",
+            'lacs_stones':     "On LACS: Stones",
+            'lacs_dungeons':   "On LACS: Dungeons",
+        },
+        gui_tooltip    = '''\
+            'Remove': Ganon's Castle Boss Key is removed
+            and the boss door in Ganon's Tower starts unlocked.
+
+            'Dungeon': Ganon's Castle Boss Key can only appear
+            inside Ganon's Castle.
+
+            'Vanilla': Ganon's Castle Boss Key will appear in 
+            the vanilla location.
+
+            'Anywhere': Ganon's Castle Boss Key can appear
+            anywhere in the world.
+            
+            'On LACS': These settings put the boss key on the
+            Light Arrow Cutscene location, from Zelda in Temple
+            of Time as adult, with differing requirements.
+            
+            'On LACS: Vanilla': Shadow and Spirit Medallions.
+            'On LACS: Medallions': All 6 Medallions.
+            'On LACS: Stones': All 3 Spiritual Stones.
+            'On LACS: Dungeons': All Spiritual Stones & Medallions.
+            
+        ''',
+        shared         = True,
+        gui_params     = {
+            'randomize_key': 'randomize_settings',
+            'distribution': [
+                ('remove',          4),
+                ('dungeon',         2),
+                ('vanilla',         2),
+                ('keysanity',       4),
+                ('lacs_vanilla',    1),
+                ('lacs_medallions', 1),
+                ('lacs_stones',     1),
+                ('lacs_dungeons',   1),
+            ],            
+        },
+    ),
     Checkbutton(
         name           = 'enhance_map_compass',
         gui_text       = 'Maps and Compasses Give Information',
-        gui_group      = 'shuffle',
         gui_tooltip    = '''\
             Gives the Map and Compass extra functionality.
             Map will tell if a dungeon is vanilla or Master Quest.
@@ -1657,31 +1891,16 @@ setting_infos = [
         },
     ),
     Checkbutton(
-        name           = 'unlocked_ganondorf',
-        gui_text       = 'Remove Ganon\'s Boss Door Lock',
-        gui_group      = 'shuffle',
-        gui_tooltip    = '''\
-            The Boss Key door in Ganon's Tower
-            will start unlocked. This is intended
-            to be used with reduced trial
-            requirements to make it more likely
-            that skipped trials can be avoided.
-        ''',
-        shared         = True,
-        gui_params     = {
-            'randomize_key': 'randomize_settings',
-        },
-    ),
-    Checkbutton(
         name           = 'mq_dungeons_random',
         gui_text       = 'Random Number of MQ Dungeons',
-        gui_group      = 'world',
         gui_tooltip    = '''\
             If set, a random number of dungeons
             will have Master Quest designs.
         ''',
-        dependency     = lambda settings: False if settings.logic_rules == 'glitched' else None,
         shared         = True,
+        disable        = {
+            True : {'settings' : ['mq_dungeons']}
+        },        
         gui_params     = {
             'randomize_key': 'randomize_settings',
             'distribution': [
@@ -1691,10 +1910,10 @@ setting_infos = [
     ),
     Scale(
         name           = 'mq_dungeons',
+        gui_text       = "Random MQ Dungeon Count",
         default        = 0,
         min            = 0,
         max            = 12,
-        gui_group      = 'world',
         gui_tooltip    = '''\
             Select a number of Master Quest
             dungeons to appear in the game.
@@ -1708,9 +1927,6 @@ setting_infos = [
             12: All dungeons will have
             Master Quest redesigns.
             ''',
-
-        dependency     = lambda settings: 0 if settings.mq_dungeons_random or settings.logic_rules == 'glitched' else None,
-
         shared         = True,
         gui_params     = {
             'randomize_key': 'randomize_settings',
@@ -1718,60 +1934,58 @@ setting_infos = [
     ),
     Setting_Info(
         name           = 'disabled_locations', 
-        type           = list, 
+        type           = list,
+        gui_text       = "Exclude Locations",
+        gui_type       = "SearchBox",
         shared         = True,
         choices        = [location.name for location in LocationIterator(lambda loc: loc.filter_tags is not None)],
         default        = [],
-        gui_params     = {
-            'text': 'Exclude Locations',
-            'widget': 'FilteredSearchBox',
-            'group': 'logic_tab',
-            'filterdata': {location.name: location.filter_tags for location in LocationIterator(lambda loc: loc.filter_tags is not None)},
-            'tooltip':'''
-                Prevent locations from being required. Major
-                items can still appear there, however they
-                will never be required to beat the game.
+        gui_tooltip    = '''
+            Prevent locations from being required. Major
+            items can still appear there, however they
+            will never be required to beat the game.
 
-                Most dungeon locations have a MQ alternative.
-                If the location does not exist because of MQ
-                then it will be ignored. So make sure to
-                disable both versions if that is the intent.
-            '''
+            Most dungeon locations have a MQ alternative.
+            If the location does not exist because of MQ
+            then it will be ignored. So make sure to
+            disable both versions if that is the intent.
+        ''',
+        gui_params     = {
+            'filterdata': {location.name: location.filter_tags for location in LocationIterator(lambda loc: loc.filter_tags is not None)},
+
         },
         exclude_random=True
     ),
     Setting_Info(
         name           = 'allowed_tricks',
         type           = list,
+        gui_text       = "Enable Tricks",
+        gui_type       = "SearchBox",
         shared         = True,
         choices        = {
             val['name']: gui_text for gui_text, val in logic_tricks.items()
         },
         default        = [],
         gui_params     = {
-            'text': 'Enable Tricks',
-            'widget': 'SearchBox',
-            'group': 'logic_tab',
-            'entry_tooltip': logic_tricks_entry_tooltip,
-            'list_tooltip': logic_tricks_list_tooltip,
+            'choice_tooltip': {choice['name']: choice['tooltip'] for choice in logic_tricks.values()},
         }
     ),
     Combobox(
         name           = 'logic_earliest_adult_trade',
+        gui_text       = 'Adult Trade Sequence Earliest Item',
         default        = 'pocket_egg',
         choices        = {
-            'pocket_egg':   'Earliest: Pocket Egg',
-            'pocket_cucco': 'Earliest: Pocket Cucco',
-            'cojiro':       'Earliest: Cojiro',
-            'odd_mushroom': 'Earliest: Odd Mushroom',
-            'poachers_saw': "Earliest: Poacher's Saw",
-            'broken_sword': 'Earliest: Broken Sword',
-            'prescription': 'Earliest: Prescription',
-            'eyeball_frog': 'Earliest: Eyeball Frog',
-            'eyedrops':     'Earliest: Eyedrops',
-            'claim_check':  'Earliest: Claim Check',
+            'pocket_egg':   'Pocket Egg',
+            'pocket_cucco': 'Pocket Cucco',
+            'cojiro':       'Cojiro',
+            'odd_mushroom': 'Odd Mushroom',
+            'poachers_saw': "Poacher's Saw",
+            'broken_sword': 'Broken Sword',
+            'prescription': 'Prescription',
+            'eyeball_frog': 'Eyeball Frog',
+            'eyedrops':     'Eyedrops',
+            'claim_check':  'Claim Check',
         },
-        gui_group      = 'checks',
         gui_tooltip    = '''\
             Select the earliest item that can appear in the adult trade sequence.
         ''',
@@ -1779,20 +1993,20 @@ setting_infos = [
     ),
     Combobox(
         name           = 'logic_latest_adult_trade',
+        gui_text       = 'Adult Trade Sequence Latest Item',
         default        = 'claim_check',
         choices        = {
-            'pocket_egg':   'Latest: Pocket Egg',
-            'pocket_cucco': 'Latest: Pocket Cucco',
-            'cojiro':       'Latest: Cojiro',
-            'odd_mushroom': 'Latest: Odd Mushroom',
-            'poachers_saw': "Latest: Poacher's Saw",
-            'broken_sword': 'Latest: Broken Sword',
-            'prescription': 'Latest: Prescription',
-            'eyeball_frog': 'Latest: Eyeball Frog',
-            'eyedrops':     'Latest: Eyedrops',
-            'claim_check':  'Latest: Claim Check',
+            'pocket_egg':   'Pocket Egg',
+            'pocket_cucco': 'Pocket Cucco',
+            'cojiro':       'Cojiro',
+            'odd_mushroom': 'Odd Mushroom',
+            'poachers_saw': "Poacher's Saw",
+            'broken_sword': 'Broken Sword',
+            'prescription': 'Prescription',
+            'eyeball_frog': 'Eyeball Frog',
+            'eyedrops':     'Eyedrops',
+            'claim_check':  'Claim Check',
         },
-        gui_group      = 'checks',
         gui_tooltip    = '''\
             Select the latest item that can appear in the adult trade sequence.
         ''',
@@ -1800,13 +2014,13 @@ setting_infos = [
     ),
     Combobox(
         name           = 'logic_lens',
+        gui_text       = 'Lens of Truth',
         default        = 'all',
         choices        = {
             'all':             'Required Everywhere',
             'chest-wasteland': 'Wasteland and Chest Minigame',
             'chest':           'Only Chest Minigame',
         },
-        gui_group      = 'tricks',
         gui_tooltip    = '''\
             'Required everywhere': every invisible or
             fake object will expect you to have the
@@ -1822,7 +2036,6 @@ setting_infos = [
     Checkbutton(
         name           = 'ocarina_songs',
         gui_text       = 'Randomize Ocarina Song Notes',
-        gui_group      = 'other',
         gui_tooltip    = '''\
                          Will need to memorize a new set of songs.
                          Can be silly, but difficult. Songs are
@@ -1834,7 +2047,6 @@ setting_infos = [
     Checkbutton(
         name           = 'correct_chest_sizes',
         gui_text       = 'Chest Size Matches Contents',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Chests will be large if they contain a major
             item and small if they don't. Boss keys will
@@ -1848,7 +2060,6 @@ setting_infos = [
     Checkbutton(
         name           = 'clearer_hints',
         gui_text       = 'Clearer Hints',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             The hints provided by Gossip Stones will
             be very direct if this option is enabled.
@@ -1857,6 +2068,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'hints',
+        gui_text       = 'Gossip Stones',
         default        = 'agony',
         choices        = {
             'none':   'No Hints',
@@ -1864,8 +2076,6 @@ setting_infos = [
             'agony':  'Hints; Need Stone of Agony',
             'always': 'Hints; Need Nothing',
         },
-        gui_text       = 'Gossip Stones',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Gossip Stones can be made to give hints
             about where items can be found.
@@ -1885,6 +2095,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'hint_dist',
+        gui_text       = 'Hint Distribution',
         default        = 'balanced',
         choices        = {
             'useless':     'Useless',
@@ -1893,8 +2104,6 @@ setting_infos = [
             'very_strong': 'Very Strong',
             'tournament':  'Tournament',
         },
-        gui_text       = 'Hint Distribution',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Useless has nothing but junk hints.
             Strong distribution has a good
@@ -1908,14 +2117,13 @@ setting_infos = [
     ),
     Combobox(
         name           = 'text_shuffle',
+        gui_text       = 'Text Shuffle',
         default        = 'none',
         choices        = {
             'none':         'No Text Shuffled',
             'except_hints': 'Shuffled except Hints and Keys',
             'complete':     'All Text Shuffled',
         },
-        gui_text       = 'Text Shuffle',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Will make things confusing for comedic value.
 
@@ -1930,6 +2138,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'junk_ice_traps',
+        gui_text       = 'Ice Traps',
         default        = 'normal',
         choices        = {
             'off':       'No Ice Traps',
@@ -1938,8 +2147,6 @@ setting_infos = [
             'mayhem':    'Ice Trap Mayhem',
             'onslaught': 'Ice Trap Onslaught',
         },
-        gui_text       = 'Ice Traps',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Off: All Ice Traps are removed.
             Normal: Only Ice Traps from the base item pool
@@ -1956,6 +2163,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'item_pool_value',
+        gui_text       = 'Item Pool',
         default        = 'balanced',
         choices        = {
             'plentiful': 'Plentiful',
@@ -1963,8 +2171,6 @@ setting_infos = [
             'scarce':    'Scarce',
             'minimal':   'Minimal'
         },
-        gui_text       = 'Item Pool',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Changes the amount of bonus items that
             are available in the game.
@@ -1982,6 +2188,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'damage_multiplier',
+        gui_text       = 'Damage Multiplier',
         default        = 'normal',
         choices        = {
             'half':      'Half',
@@ -1990,8 +2197,6 @@ setting_infos = [
             'quadruple': 'Quadruple',
             'ohko':      'OHKO',
         },
-        gui_text       = 'Damage Multiplier',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Changes the amount of damage taken.
 
@@ -2001,6 +2206,7 @@ setting_infos = [
     ),
     Combobox(
         name           = 'starting_tod',
+        gui_text       = 'Starting Time of Day',
         default        = 'default',
         choices        = {
             'default':       'Default',
@@ -2014,8 +2220,6 @@ setting_infos = [
             'midnight':      'Midnight',
             'witching-hour': 'Witching Hour',
         },
-        gui_text       = 'Starting Time of Day',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Change up Link's sleep routine.
 
@@ -2028,14 +2232,13 @@ setting_infos = [
     ),
     Combobox(
         name           = 'starting_age',
+        gui_text       = 'Starting Age',
         default        = 'child',
         choices        = {
             'child':  'Child',
             'adult':  'Adult',
             'random': 'Random',
         },
-        gui_text       = 'Starting Age',
-        gui_group      = 'other',
         gui_tooltip    = '''\
             Choose which age Link will start as.
 
@@ -2046,28 +2249,31 @@ setting_infos = [
             Closed Forest.
         ''',
         shared         = True,
-        dependency     = lambda settings: 'child' if settings.open_forest == 'closed' else None,
+        gui_params     = {
+            'randomize_key': 'randomize_settings',
+            'distribution': [
+                ('random', 1),
+            ],
+        }
     ),
     Combobox(
         name           = 'default_targeting',
+        gui_text       = 'Default Targeting Option',
         default        = 'hold',
         choices        = {
             'hold':   'Hold',
             'switch': 'Switch',
         },
-        gui_text       = 'Default Targeting Option',
-        gui_group      = 'cosmetic',
     ),
     Combobox(
         name           = 'background_music',
+        gui_text       = 'Background Music',
         default        = 'normal',
         choices        = {
             'normal': 'Normal',
             'off':    'No Music',
             'random': 'Random',
         },
-        gui_text       = 'Background Music',
-        gui_group      = 'sfx',
         gui_tooltip    = '''\
             'No Music': No background music.
             is played.
@@ -2080,7 +2286,6 @@ setting_infos = [
     Checkbutton(
         name           = 'display_dpad',
         gui_text       = 'Display D-Pad HUD',
-        gui_group      = 'cosmetic',
         gui_tooltip    = '''\
             Shows an additional HUD element displaying
             current available options on the D-Pad.
@@ -2091,131 +2296,183 @@ setting_infos = [
     Setting_Info(
         name           = 'kokiri_color',
         type           = str,
+        gui_text       = "Kokiri Tunic",
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_tunic_color_options(),
         default        = 'Kokiri Green',
-        gui_params     = {
-            'text':   'Kokiri Tunic',
-            'group':  'tunic_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
         name           = 'goron_color',
         type           = str,
+        gui_text       = "Goron Tunic",
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_tunic_color_options(),
         default        = 'Goron Red',
-        gui_params     = {
-            'text':   'Goron Tunic',
-            'group':  'tunic_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
         name           = 'zora_color',
         type           = str,
+        gui_text       = "Zora Tunic",
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_tunic_color_options(),
         default        = 'Zora Blue',
-        gui_params     = {
-            'text':   'Zora Tunic',
-            'group':  'tunic_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
-        name           = 'navi_color_default',
+        name           = 'navi_color_default_inner',
         type           = str,
+        gui_text       = "Navi Idle Inner",
+        gui_type       = "Combobox",
+        gui_params     = {
+            'no_line_break' : True,
+        },
         shared         = False,
         choices        = get_navi_color_options(),
         default        = 'White',
-        gui_params     = {
-            'text':   'Navi Idle',
-            'group':  'navi_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
+    ),
+        Setting_Info(
+        name           = 'navi_color_default_outer',
+        type           = str,
+        gui_text       = "Outer",
+        gui_type       = "Combobox",
+        shared         = False,
+        choices        = get_navi_color_options(True),
+        default        = '[Same as Inner]',
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
-        name           = 'navi_color_enemy',
+        name           = 'navi_color_enemy_inner',
         type           = str,
+        gui_text       = 'Navi Targeting Enemy Inner',
+        gui_type       = "Combobox",
+        gui_params     = {
+            'no_line_break' : True,
+        },
         shared         = False,
         choices        = get_navi_color_options(),
         default        = 'Yellow',
-        gui_params     = {
-            'text':   'Navi Targeting Enemy',
-            'group':  'navi_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
-        name           = 'navi_color_npc',
+        name           = 'navi_color_enemy_outer',
         type           = str,
+        gui_text       = 'Outer',
+        gui_type       = "Combobox",
+        shared         = False,
+        choices        = get_navi_color_options(True),
+        default        = '[Same as Inner]',
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
+    ),
+    Setting_Info(
+        name           = 'navi_color_npc_inner',
+        type           = str,
+        gui_text       = 'Navi Targeting NPC Inner',
+        gui_type       = "Combobox",
+        gui_params     = {
+            'no_line_break' : True,
+        },
         shared         = False,
         choices        = get_navi_color_options(),
         default        = 'Light Blue',
-        gui_params     = {
-            'text':   'Navi Targeting NPC',
-            'group':  'navi_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
-        name           = 'navi_color_prop',
+        name           = 'navi_color_npc_outer',
         type           = str,
+        gui_text       = 'Outer',
+        gui_type       = "Combobox",
         shared         = False,
+        choices        = get_navi_color_options(True),
+        default        = '[Same as Inner]',
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
+    ),
+    Setting_Info(
+        name           = 'navi_color_prop_inner',
+        type           = str,
+        gui_text       = 'Navi Targeting Prop Inner',
+        gui_type       = "Combobox",
+        shared         = False,
+        gui_params     = {
+            'no_line_break' : True,
+        },
         choices        = get_navi_color_options(),
         default        = 'Green',
-        gui_params     = {
-            'text':   'Navi Targeting Prop',
-            'group':  'navi_colors',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
+    ),
+    Setting_Info(
+        name           = 'navi_color_prop_outer',
+        type           = str,
+        gui_text       = 'Outer',
+        gui_type       = "Combobox",
+        shared         = False,
+        choices        = get_navi_color_options(True),
+        default        = '[Same as Inner]',
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Combobox(
         name           = 'sword_trail_duration',
+        gui_text       = 'Sword Trail Duration',
         choices        = {
             4: 'Default',
             10: 'Long',
@@ -2223,8 +2480,6 @@ setting_infos = [
             20: 'Lightsaber',
         },
         default        = 4,
-        gui_text       = 'Sword Trail Duration',
-        gui_group      = 'sword_trails',
         gui_tooltip    = '''\
             Select the duration for sword trails.
         ''',
@@ -2232,121 +2487,102 @@ setting_infos = [
     Setting_Info(
         name           = 'sword_trail_color_inner',
         type           = str,
+        gui_text       = 'Inner Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_sword_color_options(),
         default        = 'White',
-        gui_params     = {
-            'text':   'Inner Color',
-            'group':  'sword_trails',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-                'Rainbow': Rainbow sword trails.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+            'Rainbow': Rainbow sword trails.
+        '''
     ),
     Setting_Info(
         name           = 'sword_trail_color_outer',
         type           = str,
+        gui_text       = 'Outer Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_sword_color_options(),
         default        = 'White',
-        gui_params     = {
-            'text':   'Outer Color',
-            'group':  'sword_trails',
-            'widget': 'Combobox',
-            'tooltip':'''\
-                      'Random Choice': Choose a random
-                      color from this list of colors.
-                      'Completely Random': Choose a random
-                      color from any color the N64 can draw.
-                      'Rainbow': Rainbow sword trails.
-            '''
-        }
+        gui_tooltip    = '''\
+                  'Random Choice': Choose a random
+                  color from this list of colors.
+                  'Completely Random': Choose a random
+                  color from any color the N64 can draw.
+                  'Rainbow': Rainbow sword trails.
+        '''
     ),
     Setting_Info(
         name           = 'silver_gauntlets_color',
         type           = str,
+        gui_text       = 'Silver Gauntlets Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_gauntlet_color_options(),
         default        = 'Silver',
-        gui_params     = {
-            'text':   'Silver Gauntlets Color',
-            'group':  'gauntlet_colors',
-            'widget': 'Combobox',
-            'tooltip': '''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-                'Rainbow': Rainbow sword trails.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+            'Rainbow': Rainbow sword trails.
+        '''
     ),
     Setting_Info(
         name           = 'golden_gauntlets_color',
         type           = str,
+        gui_text       = 'Golden Gauntlets Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_gauntlet_color_options(),
         default        = 'Gold',
-        gui_params={
-            'text':   'Golden Gauntlets Color',
-            'group':  'gauntlet_colors',
-            'widget': 'Combobox',
-            'tooltip': '''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-                'Rainbow': Rainbow sword trails.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+            'Rainbow': Rainbow sword trails.
+        '''
     ),
     Setting_Info(
         name           = 'heart_color',
         type           = str,
+        gui_text       = 'Heart Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_heart_color_options(),
         default        = 'Red',
-        gui_params     = {
-            'text':   'Heart Color',
-            'group':  'ui_colors',
-            'widget': 'Combobox',
-            'tooltip': '''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Setting_Info(
         name           = 'magic_color',
         type           = str,
+        gui_text       = 'Magic Color',
+        gui_type       = "Combobox",
         shared         = False,
         choices        = get_magic_color_options(),
         default        = 'Green',
-        gui_params     = {
-            'text':   'Magic Color',
-            'group':  'ui_colors',
-            'widget': 'Combobox',
-            'tooltip': '''\
-                'Random Choice': Choose a random
-                color from this list of colors.
-                'Completely Random': Choose a random
-                color from any color the N64 can draw.
-            '''
-        },
+        gui_tooltip    = '''\
+            'Random Choice': Choose a random
+            color from this list of colors.
+            'Completely Random': Choose a random
+            color from any color the N64 can draw.
+        '''
     ),
     Combobox(
         name           = 'sfx_low_hp',
+        gui_text       = 'Low HP',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.HP_LOW),
         default        = 'default',
-        gui_text       = 'Low HP',
-        gui_group      = 'sfx',
         gui_tooltip    = '''\
             'Random Choice': Choose a random
             sound from this list.
@@ -2355,55 +2591,49 @@ setting_infos = [
     ),
     Combobox(
         name           = 'sfx_navi_overworld',
+        gui_text       = 'Navi Overworld',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.NAVI_OVERWORLD),
         default        = 'default',
-        gui_text       = 'Navi Overworld',
-        gui_group      = 'npc_sfx',
     ),
     Combobox(
         name           = 'sfx_navi_enemy',
+        gui_text       = 'Navi Enemy',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.NAVI_ENEMY),
         default        = 'default',
-        gui_text       = 'Navi Enemy',
-        gui_group      = 'npc_sfx',
     ),
     Combobox(
         name           = 'sfx_menu_cursor',
+        gui_text       = 'Menu Cursor',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.MENU_CURSOR),
         default        = 'default',
-        gui_text       = 'Menu Cursor',
-        gui_group      = 'menu_sfx',
     ),
     Combobox(
         name           = 'sfx_menu_select',
+        gui_text       = 'Menu Select',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.MENU_SELECT),
         default        = 'default',
-        gui_text       = 'Menu Select',
-        gui_group      = 'menu_sfx',
     ),
     Combobox(
         name           = 'sfx_horse_neigh',
+        gui_text       = 'Horse',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.HORSE_NEIGH),
         default        = 'default',
-        gui_text       = 'Horse',
-        gui_group      = 'sfx',
     ),
     Combobox(
         name           = 'sfx_nightfall',
+        gui_text       = 'Nightfall',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.NIGHTFALL),
         default        = 'default',
-        gui_text       = 'Nightfall',
-        gui_group      = 'sfx',
     ),
     Combobox(
         name           = 'sfx_hover_boots',
+        gui_text       = 'Hover Boots',
         choices        = sfx.get_setting_choices(sfx.SoundHooks.BOOTS_HOVER),
         default        = 'default',
-        gui_text       = 'Hover Boots',
-        gui_group      = 'sfx',
     ),
     Combobox(
         name           = 'sfx_ocarina',
+        gui_text       = 'Ocarina',
         choices        = {
             'ocarina':       'Default',
             'random-choice': 'Random Choice',
@@ -2414,8 +2644,6 @@ setting_infos = [
             'grind-organ':   'Grind Organ',
         },
         default        = 'ocarina',
-        gui_text       = 'Ocarina',
-        gui_group      = 'sfx',
         gui_tooltip    = '''\
             Change the sound of the ocarina.
         ''',
@@ -2607,6 +2835,65 @@ setting_infos = [
 
 ]
 
+
 si_dict = {si.name: si for si in setting_infos}
 def get_setting_info(name):
     return si_dict[name]
+
+
+def create_dependency(setting, disabling_setting, option):
+    disabled_info = get_setting_info(setting)
+    if disabled_info.dependency is None:
+        disabled_info.dependency = lambda settings: getattr(settings, disabling_setting.name) == option
+    else:
+        old_dependency = disabled_info.dependency
+        disabled_info.dependency = lambda settings: getattr(settings, disabling_setting.name) == option or old_dependency(settings)
+
+
+def get_settings_from_section(section_name):
+    for tab in setting_map['Tabs']:
+        for section in tab['sections']:
+            if section['name'] == section_name:
+                for setting in section['settings']:
+                    yield setting
+                return
+
+
+def get_settings_from_tab(tab_name):
+    for tab in setting_map['Tabs']:
+        if tab['name'] == tab_name:
+            for section in tab['sections']:
+                for setting in section['settings']:
+                    yield setting
+            return
+
+
+def is_mapped(setting_name):
+    for tab in setting_map['Tabs']:
+        for section in tab['sections']:
+            if setting_name in section['settings']:
+                return True
+    return False
+
+
+class UnmappedSettingError(Exception):
+    pass
+
+
+with open(data_path('settings_mapping.json')) as f:
+    setting_map = json.load(f)
+
+for info in setting_infos:
+    if info.gui_text is not None and not is_mapped(info.name):
+        raise UnmappedSettingError(f'{info.name} is defined but is not in the settings map. Add it to the settings_mapping or set the gui_text to None to suppress.')
+
+    if info.disable != None:
+        for option, disabling in info.disable.items():
+            for setting in disabling.get('settings', []):
+                create_dependency(setting, info, option)
+            for section in disabling.get('setions', []):
+                for setting in get_settings_from_section(section):
+                    create_dependency(setting, info, option)
+            for tab in disabling.get('tabs', []):
+                for setting in get_settings_from_tab(tab):
+                    create_dependency(setting, info, option)

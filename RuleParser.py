@@ -73,6 +73,14 @@ class Rule_AST_Transformer(ast.NodeTransformer):
             args=[ast.Str(node.s)],
             keywords=[])
 
+    # python 3.8 compatibility: ast walking now uses visit_Constant for Constant subclasses
+    # this includes Num, Str, NameConstant, Bytes, and Ellipsis. We only handle Str.
+    def visit_Constant(self, node):
+        if isinstance(node, ast.Str):
+            return self.visit_Str(node)
+        return node
+
+
     def visit_Tuple(self, node):
         if len(node.elts) != 2:
             raise Exception('Parse Error: Tuple must have 2 values', self.current_spot.name, ast.parse(node, False))
@@ -208,6 +216,7 @@ class Rule_AST_Transformer(ast.NodeTransformer):
             newrule = ast.fix_missing_locations(
                 ast.Expression(ast.Lambda(
                     args=ast.arguments(
+                        posonlyargs=[],
                         args=[ast.arg(arg='state')],
                         defaults=[],
                         kwonlyargs=[],

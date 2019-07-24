@@ -354,31 +354,6 @@ deku_scrubs_items = (
     ['Rupees (5)'] * 4) # ['Green Potion']
 
 
-boss_location_names = [
-    'Queen Gohma',
-    'King Dodongo',
-    'Barinade',
-    'Phantom Ganon',
-    'Volvagia',
-    'Morpha',
-    'Bongo Bongo',
-    'Twinrova',
-    'Links Pocket'
-]
-
-
-rewardlist = [
-    'Kokiri Emerald',
-    'Goron Ruby',
-    'Zora Sapphire',
-    'Forest Medallion',
-    'Fire Medallion',
-    'Water Medallion',
-    'Spirit Medallion',
-    'Shadow Medallion',
-    'Light Medallion']
-
-
 songlist = [
     'Zeldas Lullaby',
     'Eponas Song',
@@ -511,14 +486,12 @@ droplocations = {
 
 vanillaBK = {
     'Fire Temple Boss Key Chest': 'Boss Key (Fire Temple)',
-    'Ganons Tower Boss Key Chest': 'Boss Key (Ganons Castle)',
     'Shadow Temple Boss Key Chest': 'Boss Key (Shadow Temple)',
     'Spirit Temple Boss Key Chest': 'Boss Key (Spirit Temple)',
     'Water Temple Boss Key Chest': 'Boss Key (Water Temple)',
     'Forest Temple Boss Key Chest': 'Boss Key (Forest Temple)',
 
     'Fire Temple MQ Boss Key Chest': 'Boss Key (Fire Temple)',
-    'Ganons Tower Boss Key Chest': 'Boss Key (Ganons Castle)',
     'Shadow Temple MQ Boss Key Chest': 'Boss Key (Shadow Temple)',
     'Spirit Temple MQ Boss Key Chest': 'Boss Key (Spirit Temple)',
     'Water Temple MQ Boss Key Chest': 'Boss Key (Water Temple)',
@@ -756,9 +729,6 @@ def generate_itempool(world):
     for (location, item) in placed_items.items():
         world.push_item(location, ItemFactory(item, world))
         world.get_location(location).locked = True
-
-    choose_trials(world)
-    fill_bosses(world)
 
     world.initialize_items()
 
@@ -1165,7 +1135,11 @@ def get_pool_core(world):
             world.state.collect(item)
             pool.extend(get_junk_item())
     if world.shuffle_bosskeys == 'remove':
-        for item in [item for dungeon in world.dungeons for item in dungeon.boss_key]:
+        for item in [item for dungeon in world.dungeons if dungeon.name != 'Ganons Castle' for item in dungeon.boss_key]:
+            world.state.collect(item)
+            pool.extend(get_junk_item())
+    if world.shuffle_ganon_bosskey == 'remove':
+        for item in [item for dungeon in world.dungeons if dungeon.name == 'Ganons Castle' for item in dungeon.boss_key]:
             world.state.collect(item)
             pool.extend(get_junk_item())
 
@@ -1202,10 +1176,16 @@ def get_pool_core(world):
             except KeyError:
                 continue
 
+    if world.shuffle_ganon_bosskey == 'vanilla':
+        placed_items['Ganons Tower Boss Key Chest'] = 'Boss Key (Ganons Castle)'
+
     if not world.keysanity and not world.dungeon_mq['Fire Temple']:
         world.state.collect(ItemFactory('Small Key (Fire Temple)'))
     if not world.dungeon_mq['Water Temple']:
         world.state.collect(ItemFactory('Small Key (Water Temple)'))
+
+    if world.shuffle_ganon_bosskey in ['lacs_vanilla', 'lacs_medallions', 'lacs_stones', 'lacs_dungeons']:
+        placed_items['Zelda'] = 'Boss Key (Ganons Castle)'
 
     if world.item_pool_value == 'plentiful':
         pool.extend(easy_items)
@@ -1235,7 +1215,8 @@ def get_pool_core(world):
         remove_junk_pool = list(remove_junk_pool) + ['Recovery Heart', 'Bombs (20)', 'Arrows (30)', 'Ice Trap']
 
         junk_candidates = [item for item in pool if item in remove_junk_pool]
-        for pending_item in pending_junk_pool:
+        while pending_junk_pool:
+            pending_item = pending_junk_pool.pop()
             if not junk_candidates:
                 raise RuntimeError("Not enough junk exists in item pool for %s to be added." % pending_item)
             junk_item = random.choice(junk_candidates)
@@ -1248,38 +1229,3 @@ def get_pool_core(world):
     world.distribution.collect_starters(world.state)
 
     return (pool, placed_items)
-
-
-def choose_trials(world):
-    trial_pool = list(world.skipped_trials)
-    dist_chosen = world.distribution.configure_trials(trial_pool)
-    dist_num_chosen = len(dist_chosen)
-
-    if world.trials_random:
-        world.trials = dist_num_chosen + random.randint(0, len(trial_pool))
-    num_trials = int(world.trials)
-    choosen_trials = random.sample(trial_pool, num_trials - dist_num_chosen)
-    for trial in world.skipped_trials:
-        if trial not in choosen_trials and trial not in dist_chosen:
-            world.skipped_trials[trial] = True
-
-
-def fill_bosses(world, bossCount=9):
-    boss_rewards = ItemFactory(rewardlist, world)
-    boss_locations = [world.get_location(loc) for loc in boss_location_names]
-
-    placed_prizes = [loc.item.name for loc in boss_locations if loc.item is not None]
-    unplaced_prizes = [item for item in boss_rewards if item.name not in placed_prizes]
-    empty_boss_locations = [loc for loc in boss_locations if loc.item is None]
-    prizepool = list(unplaced_prizes)
-    prize_locs = list(empty_boss_locations)
-
-    bossCount -= world.distribution.fill_bosses(world, prize_locs, prizepool)
-
-    while bossCount:
-        bossCount -= 1
-        random.shuffle(prizepool)
-        random.shuffle(prize_locs)
-        item = prizepool.pop()
-        loc = prize_locs.pop()
-        world.push_item(loc, item)
