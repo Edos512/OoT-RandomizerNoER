@@ -392,6 +392,32 @@
           ]
         }
       ]
+    },
+	{
+      "name": "random_settings_tab",
+      "text": "Random settings",
+       "exclude_from_web": true,
+      "sections": [
+        {
+          "name": "Random_settings_section",
+          "text": "Random settings",
+          
+          "row_span": 3,
+          "settings": [
+            "text_shuffle_max",
+			"damage_multiplier_max",
+            "bridge_max",
+			"shuffle_scrubs_max",
+			"tokensanity_max",
+            "junk_ice_traps_max",
+            "item_pool_value_max",
+            "disallow_random_tricks",
+            "entrance_shuffle_max"
+        
+          ]
+        }
+       
+      ]
     }
   ]
 }

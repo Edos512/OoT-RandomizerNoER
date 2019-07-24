@@ -933,10 +933,12 @@ setting_infos = [
             'min' : 1,
         }
     ),
+
+    
     Setting_Info('world_count',       int, "Player Count", "Numberinput", True, {}, 
         default        = 1,
 
-        shared         = True,
+        
 	exclude_random = True,
 
         gui_params = {
@@ -2658,7 +2660,7 @@ setting_infos = [
                 },
             
             gui_text       = 'Maximum Text Shuffle',
-            gui_group      = 'random_settings',
+            
             gui_tooltip    = '''\
                              Choose maximum shuffle the game's messages.
                              ''',
@@ -2677,7 +2679,7 @@ setting_infos = [
                 },
             
             gui_text       = 'Maximum Damage Multiplier',
-            gui_group      = 'random_settings',
+            
             gui_tooltip    = '''\
                              Changes the maximum random multiplier
                              ''',
@@ -2698,7 +2700,7 @@ setting_infos = [
                 },
             
             gui_text       = 'Rainbow Bridge Max Requirement',
-            gui_group      = 'random_settings',
+            
             gui_tooltip    = '''\
                              Sets the maximum bridge requirement for random settings
                              ''',
@@ -2716,7 +2718,7 @@ setting_infos = [
                 },
            
             gui_text       = 'Max Scrub Shuffle',
-            gui_group      = 'random_settings',
+           
             gui_tooltip    = '''\
                              'Off': Only the 3 Scrubs that give one-time
                              items in the vanilla game (PoH, Deku Nut
@@ -2749,7 +2751,7 @@ setting_infos = [
                 },
            
             gui_text       = 'Max Tokensanity Setting',
-            gui_group      = 'random_settings',
+            
             gui_tooltip    = '''\
                              Maximum setting for tokensanity
                              ''',
@@ -2768,7 +2770,7 @@ setting_infos = [
                 },
             
             gui_text       = 'Max Ice Traps',
-            gui_group      = 'random_settings',
+           
             gui_tooltip    = '''\
                              Maximum setting for ice traps
                              ''',
@@ -2786,7 +2788,7 @@ setting_infos = [
                 },
         
             gui_text       = 'Max Item Pool difficulty',
-            gui_group      = 'random_settings',
+            
             gui_tooltip    = '''\
                              Changes the amount of bonus items that
                              are available in the game.
@@ -2807,7 +2809,7 @@ setting_infos = [
             name           = 'disallow_random_tricks',
             default         = True,
             gui_text       = 'Disallow tricks',
-            gui_group      = 'random_settings',
+           
             gui_tooltip    = '''\
                              If not selected random hints will be taken into account for logic
                              ''',
@@ -2825,7 +2827,7 @@ setting_infos = [
             'all':              'All Indoors & Overworld',
         },
         gui_text       = 'Max Entrance Shuffle',
-        gui_group      = 'random_settings',
+       
         gui_tooltip    = '''\
            Maximum ER setting
         ''',
