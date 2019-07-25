@@ -411,8 +411,8 @@
 			"tokensanity_max",
             "junk_ice_traps_max",
             "item_pool_value_max",
-            "disallow_random_tricks",
-            "entrance_shuffle_max"
+            "entrance_shuffle_max",
+			"randomize_settings_button"
         
           ]
         }

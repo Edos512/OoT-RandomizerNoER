@@ -574,6 +574,71 @@ export class GUIGlobal {
     });
   }
 
+	randomSettings(){
+		
+		 console.log("WAAAAA");
+        var max_rando={};
+         this.getGlobalVar('generatorSettingsArray').forEach(tab => {
+			tab.sections.forEach(section => {
+				section.settings.forEach(setting => {
+					if(setting.max_rando){
+						
+						if (setting.type == "Combobox") {
+							let index=0;
+							let maxValue = this.generator_settingsMap[setting.name];
+							for(let k=0;k<setting.options.length;k++){
+								if(maxValue==setting.options[k].name){
+									index=k;
+								}
+							}
+							max_rando[setting.affected]=index;
+						}
+						
+					}
+				});
+			});
+		 });
+        
+		this.getGlobalVar('generatorSettingsArray').forEach(tab => {
+			tab.sections.forEach(section => {
+				section.settings.forEach(setting => {
+					if(setting.shared&&!setting.exclude_random){
+						let value;
+						let rand=0;
+						if(setting.type == "Checkbutton"){
+							rand=Math.floor(Math.random()*2);
+							value=false;
+							if(rand==1)
+								value=true;
+							this.generator_settingsMap[setting.name]=value;
+						}
+						if(setting.type=="Combobox"){
+							let index = 0;
+							let maxValue = setting.options.length-1;
+							if(setting.name in max_rando)
+								maxValue = max_rando[setting.name];
+							if(maxValue > 0)
+								index = Math.floor(Math.random()*(maxValue+1));
+							value = setting.options[index].name;
+							this.generator_settingsMap[setting.name]=value;
+						}
+						if(setting.type=="Scale"){
+
+							value = 0;
+							let minValue = setting.min;
+							let maxValue = setting.max;
+							value = Math.floor(Math.random()*(maxValue-minValue+1))+minValue;
+							this.generator_settingsMap[setting.name]=value;
+						}
+						
+					}
+				});
+			});
+		 });
+        
+        
+	}
+
   applyDefaultSettings() {
 
     let cleanSettings = this.createSettingsFileObject(false, true, !this.getGlobalVar('electronAvailable'));

@@ -2805,17 +2805,7 @@ setting_infos = [
              max_rando     = True,
             affected      = 'item_pool_value',
             ),
-    Checkbutton(
-            name           = 'disallow_random_tricks',
-            default         = True,
-            gui_text       = 'Disallow tricks',
-           
-            gui_tooltip    = '''\
-                             If not selected random hints will be taken into account for logic
-                             ''',
-            max_rando     = True,
-            affected      = 'allowed_tricks',
-            ),
+   
    Combobox(
        name           = 'entrance_shuffle_max',
         default        = 'off',
@@ -2834,6 +2824,7 @@ setting_infos = [
         max_rando         = True,
         affected= 'entrance_shuffle'
     ),
+    Setting_Info('randomize_settings_button',   str, "Randomize settings", "RandomizeSettingsButton", False, {})
 
 ]
 

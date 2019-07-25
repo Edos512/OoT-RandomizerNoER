@@ -452,6 +452,14 @@ export class GeneratorComponent implements OnInit {
     });
   }
 
+randomSettings() { //Electron only
+
+    console.log("AQUI ENTRAMOS");
+	this.global.randomSettings();
+	
+  }
+
+
   browseForFile(setting: any) { //Electron only
     this.global.browseForFile(setting.file_types).then(res => {
       this.global.generator_settingsMap[setting.name] = res;

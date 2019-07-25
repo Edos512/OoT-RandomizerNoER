@@ -118,6 +118,9 @@
                         <ng-container *ngSwitchCase="'Outputdirbutton'">
                           <button class="outputDirButton" [disabled]="!global.generator_settingsVisibilityMap[setting.name]" nbButton status="info" size="small" (click)="openOutputDir()">{{setting.text}}</button>
                         </ng-container>
+						<ng-container *ngSwitchCase="'RandomizeSettingsButton'">
+                          <button class="outputDirButton" [disabled]="!global.generator_settingsVisibilityMap[setting.name]" nbButton status="info" size="small" (click)="randomSettings()">{{setting.text}}</button>
+                        </ng-container>
                         <!--Exclusive to Detailed Tab-->
                         <ng-container *ngSwitchCase="'SearchBox'">
                           <gui-listbox [disabled]="!global.generator_settingsVisibilityMap[setting.name]" [source]="setting.options" [(destination)]="global.generator_settingsMap[setting.name]" (destinationChange)="afterSettingChange()"

@@ -36,6 +36,10 @@ def GetSettingJson(setting, web_version, as_array=False):
         'text':          setting_info.gui_text,
         'tooltip':       RemoveTrailingLines('<br>'.join(line.strip() for line in setting_info.gui_tooltip.split('\n'))),
         'type':          setting_info.gui_type,
+        'max_rando':     setting_info.max_rando,
+        'exclude_random': setting_info.exclude_random,
+        'shared':        setting_info.shared,
+        'affected':      setting_info.affected
     }
 
     if as_array:
