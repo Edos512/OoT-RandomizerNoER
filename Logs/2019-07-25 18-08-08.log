@@ -1,0 +1,36 @@
+OoT Randomizer Version 4.14.20 f.LUM  -  Seed: NGM79YSCSV
+(Original) Settings string: AJ6G8SS7HUUAFCMSAAAAAAFJAGC
+
+Generating World 0.
+Creating Overworld
+Calculating Access Rules.
+Generating Item Pool.
+Setting Entrances.
+Fill the world.
+shop items placed for world 1
+song items placed for world 1
+Unique dungeon items placed
+Calculating playthrough.
+Collected 17 spheres
+Collected 9 final spheres
+Patching ROM.
+Compressing ROM.
+Starting compression.
+Loading Archive.
+Detected 8 cores.
+1375 files remaining...
+1225 files remaining...
+1075 files remaining...
+ 925 files remaining...
+ 775 files remaining...
+ 625 files remaining...
+ 475 files remaining...
+ 325 files remaining...
+ 175 files remaining...
+  25 files remaining...
+Files compressed, writing new ROM.
+Compression complete.
+Created compessed rom at: C:\Users\USUARIO\Documents\GitHub\OoT-Randomizer\Output\OoT_68C5F_NGM79YSCSV-comp.z64
+Created spoiler log at: OoT_68C5F_NGM79YSCSV_Spoiler.json
+Created cosmetic log at: C:\Users\USUARIO\Documents\GitHub\OoT-Randomizer\Output\OoT_68C5F_NGM79YSCSV_Cosmetics.txt
+Done. Enjoy.

@@ -454,9 +454,9 @@ export class GeneratorComponent implements OnInit {
 
 randomSettings() { //Electron only
 
-    console.log("AQUI ENTRAMOS");
+   
 	this.global.randomSettings();
-	
+	this.getSettingsString();
   }
 
 
