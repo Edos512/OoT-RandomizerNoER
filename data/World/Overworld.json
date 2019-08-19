@@ -27,6 +27,9 @@
         "region_name": "Kokiri Forest",
         "scene": "Kokiri Forest",
         "hint": "Kokiri Forest",
+        "events": {
+            "Showed Mido Sword & Shield": "open_forest == 'open' or (is_child and Kokiri_Sword and Buy_Deku_Shield)"
+        },
         "locations": {
             "Kokiri Sword Chest": "is_child",
             "GS Kokiri Know It All House": "
@@ -48,7 +51,7 @@
             "House of Twins": "True",
             "Know It All House": "True",
             "Kokiri Shop": "True",
-            "Outside Deku Tree": "(Kokiri_Sword and Buy_Deku_Shield) or is_adult or open_forest == 'open'",
+            "Outside Deku Tree": "is_adult or 'Showed Mido Sword & Shield'",
             "Lost Woods": "True",
             "Lost Woods Bridge From Forest": "can_leave_forest",
             "Kokiri Forest Storms Grotto": "can_play(Song_of_Storms)"
@@ -71,7 +74,7 @@
             "Deku Tree Gossip Stone (Right)": "True"
         },
         "exits": {
-            "Deku Tree Lobby": "is_child or shuffle_dungeon_entrances",
+            "Deku Tree Lobby": "is_child or (shuffle_dungeon_entrances and 'Showed Mido Sword & Shield')",
             "Kokiri Forest": "True"
         }
     },
@@ -316,8 +319,8 @@
                 is_child or can_use(Scarecrow) or
                 here(can_plant_bean) or 'Water Temple Clear'",
             "Water Temple Lobby": "
-                here(is_adult and (can_use(Hookshot) and Iron_Boots or can_use(Longshot))) and
-                ((Progressive_Scale, 2) or can_use(Iron_Boots)) and is_adult",
+                (can_use(Hookshot) and can_use(Iron_Boots)) or
+                (can_use(Longshot) and (Progressive_Scale, 2))",
             "Lake Hylia Grotto": "True"
         }
     },
@@ -1041,7 +1044,8 @@
     {
         "region_name": "Shield Grave",
         "locations": {
-            "Shield Grave Chest": "True"
+            "Shield Grave Chest": "True",
+            "Free Fairies": "can_blast_or_smash and has_bottle"
         },
         "exits": {
             "Graveyard": "True"
@@ -1050,8 +1054,7 @@
     {
         "region_name": "Heart Piece Grave",
         "locations": {
-            "Heart Piece Grave Chest": "can_play(Suns_Song)",
-            "Free Fairies": "can_blast_or_smash and has_bottle"
+            "Heart Piece Grave Chest": "can_play(Suns_Song)"
         },
         "exits": {
             "Graveyard": "True"
@@ -1677,7 +1680,7 @@
     {
         "region_name": "Deku Theater",
         "locations": {
-            "Deku Theater Skull Mask": "is_child and 'Skull Mask'",
+            "Deku Theater Skull Mask": "is_child and 'Skull Mask' and (hint_dist != 'tournament' or guarantee_hint)",
             "Deku Theater Mask of Truth": "is_child and 'Mask of Truth' and guarantee_hint"
         },
         "exits": {

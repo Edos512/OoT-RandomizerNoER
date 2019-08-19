@@ -21,7 +21,7 @@ from JSONDump import dump_obj, CollapseList, CollapseDict, AllignedDict, SortedD
 
 
 per_world_keys = (
-    ':randomized_settings',
+    'randomized_settings',
     'starting_items',
     'item_pool',
     'dungeons',
@@ -211,7 +211,7 @@ class WorldDistribution(object):
 
     def update(self, src_dict, update_all=False):
         update_dict = {
-            'randomized_settings': None,
+            'randomized_settings': {name: record for (name, record) in src_dict.get('randomized_settings', {}).items()},
             'dungeons': {name: DungeonRecord(record) for (name, record) in src_dict.get('dungeons', {}).items()},
             'trials': {name: TrialRecord(record) for (name, record) in src_dict.get('trials', {}).items()},
             'item_pool': {name: ItemPoolRecord(record) for (name, record) in src_dict.get('item_pool', {}).items()},
@@ -241,7 +241,7 @@ class WorldDistribution(object):
 
     def to_json(self):
         return {
-            ':randomized_settings': self.randomized_settings,      
+            'randomized_settings': self.randomized_settings,      
             'starting_items': SortedDict({name: record.to_json() for (name, record) in self.starting_items.items()}),
             'dungeons': {name: record.to_json() for (name, record) in self.dungeons.items()},
             'trials': {name: record.to_json() for (name, record) in self.trials.items()},
@@ -286,6 +286,29 @@ class WorldDistribution(object):
                 if record.active:
                     dist_chosen.append(name)
         return dist_chosen
+
+
+    def configure_randomized_settings(self, world):
+        for name, record in self.randomized_settings.items():
+            setattr(world, name, record)
+            if name not in world.randomized_list:
+                world.randomized_list.append(name)
+
+
+    def configure_stating_items_settings(self, world):
+        if world.start_with_wallet:
+            self.give_item('Progressive Wallet', 3)
+        if world.start_with_rupees:
+            self.give_item('Rupees', 999)
+        if world.start_with_deku_equipment:
+            if world.shopsanity == "off":
+                self.give_item('Deku Shield')
+            self.give_item('Deku Sticks', 99)
+            self.give_item('Deku Nuts', 99)
+        if world.start_with_fast_travel:
+            self.give_item('Prelude of Light')
+            self.give_item('Serenade of Water')
+            self.give_item('Farores Wind')
 
 
     def pool_remove_item(self, pools, item_name, count, world_id=None, use_base_pool=True):
@@ -562,7 +585,7 @@ class WorldDistribution(object):
             stoneID = pull_random_element([stoneIDs], lambda id: matcher(gossipLocations[id].name))
             if stoneID is None:
                 raise RuntimeError('Gossip stone unknown or already assigned in world %d: %s' % (self.id + 1, name))
-            spoiler.hints[self.id][stoneID] = GossipText(text=record.text, colors=record.colors)
+            spoiler.hints[self.id][stoneID] = GossipText(text=record.text, colors=record.colors, prefix='')
 
 
     def give_item(self, item, count=1):
@@ -621,7 +644,13 @@ class Distribution(object):
             'file_hash': (src_dict.get('file_hash', []) + [None, None, None, None, None])[0:5],
             'playthrough': None,
             'entrance_playthrough': None,
+            '_settings': src_dict.get('settings', {}),
         }
+
+        self.settings.__dict__.update(update_dict['_settings'])
+        if 'settings' in src_dict:
+            src_dict['_settings'] = src_dict['settings']
+            del src_dict['settings']
 
         if update_all:
             self.__dict__.update(update_dict)
@@ -630,6 +659,7 @@ class Distribution(object):
         else:
             for k in src_dict:
                 setattr(self, k, update_dict[k])
+
 
         for k in per_world_keys:
             if k in src_dict:
@@ -649,7 +679,7 @@ class Distribution(object):
             'file_hash': CollapseList(self.file_hash),
             ':seed': self.settings.seed,
             ':settings_string': self.settings.settings_string,
-            ':settings': self.settings.to_json(),
+            'settings': self.settings.to_json(),
         }
 
         if spoiler:
@@ -664,22 +694,23 @@ class Distribution(object):
 
             if self.playthrough is not None:
                 self_dict[':playthrough'] = AllignedDict({
-                    sphere_nr: {
+                    sphere_nr: SortedDict({
                         name: record.to_json() for name, record in sphere.items()
-                    }
+                    })
                     for (sphere_nr, sphere) in self.playthrough.items()
                 }, depth=2)
 
             if self.entrance_playthrough is not None and len(self.entrance_playthrough) > 0:
                 self_dict[':entrance_playthrough'] = AllignedDict({
-                    sphere_nr: {
+                    sphere_nr: SortedDict({
                         name: record.to_json() for name, record in sphere.items()
-                    }
+                    })
                     for (sphere_nr, sphere) in self.entrance_playthrough.items()
                 }, depth=2)
 
         if not include_output:
             strip_output_only(self_dict)
+            self_dict['settings'] = dict(self._settings)
         return self_dict
 
 
@@ -691,10 +722,10 @@ class Distribution(object):
         return dump_obj(self.to_json())
 
 
-    def update_spoiler(self, spoiler):
+    def update_spoiler(self, spoiler, output_spoiler):
         self.file_hash = [HASH_ICONS[icon] for icon in spoiler.file_hash]
 
-        if not self.settings.create_spoiler:
+        if not output_spoiler:
             return
 
         spoiler.parse_data()
@@ -754,8 +785,8 @@ class Distribution(object):
         return Distribution(settings, src_dict)
 
 
-    def to_file(self, filename):
-        json = self.to_str(spoiler=self.settings.create_spoiler)
+    def to_file(self, filename, output_spoiler):
+        json = self.to_str(spoiler=output_spoiler)
         with open(filename, 'w') as outfile:
             outfile.write(json)
 

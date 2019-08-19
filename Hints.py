@@ -4,8 +4,10 @@ import logging
 import os
 import struct
 import random
+from collections import OrderedDict
 
 from HintList import getHint, getHintGroup, Hint, hintExclusions
+from Item import MakeEventItem
 from Messages import update_message_by_id
 from Playthrough import Playthrough
 from TextBox import line_wrap
@@ -97,6 +99,13 @@ def isRestrictedDungeonItem(dungeon, item):
     return False
 
 
+def stone_reachability(world, stone_location):
+    # just name the event item after the gossip stone directly
+    MakeEventItem(stone_location, world.get_location(stone_location))
+
+    return lambda state, **kwargs: state.has(stone_location)
+
+
 def add_hint(spoiler, world, IDs, gossip_text, count, location=None, force_reachable=False):
     random.shuffle(IDs)
     skipped_ids = []
@@ -110,8 +119,9 @@ def add_hint(spoiler, world, IDs, gossip_text, count, location=None, force_reach
                 stone_location = gossipLocations[id].location
                 if not first or can_reach_stone(spoiler.worlds, stone_location, location):
                     if first and location:
-                        old_rule = location.access_rule
-                        location.access_rule = lambda state: state.can_reach(stone_location, resolution_hint='Location') and old_rule(state)
+                        # This mostly guarantees that we don't lock the player out of an item hint
+                        # by establishing a (hint -> item) -> hint -> item -> (first hint) loop
+                        location.add_rule(stone_reachability(world, stone_location))
 
                     count -= 1
                     first = False
@@ -227,7 +237,11 @@ def get_hint_area(spot):
 
 def get_woth_hint(spoiler, world, checked):
     locations = spoiler.required_locations[world.id]
-    locations = list(filter(lambda location: location.name not in checked, locations))
+    locations = list(filter(lambda location: 
+        location.name not in checked and \
+        not (world.woth_dungeon >= 2 and location.parent_region.dungeon), 
+        locations))
+
     if not locations:
         return None
 
@@ -235,6 +249,8 @@ def get_woth_hint(spoiler, world, checked):
     checked.append(location.name)
 
     if location.parent_region.dungeon:
+        if world.hint_dist != 'very_strong':
+            world.woth_dungeon += 1
         location_text = getHint(location.parent_region.dungeon.name, world.clearer_hints).text
     else:
         location_text = get_hint_area(location)
@@ -323,6 +339,10 @@ def get_specific_hint(spoiler, world, checked, type):
     return (GossipText('%s #%s#.' % (location_text, item_text), ['Green', 'Red']), location)
 
 
+def get_sometimes_hint(spoiler, world, checked):
+    return get_specific_hint(spoiler, world, checked, 'sometimes')
+
+
 def get_song_hint(spoiler, world, checked):
     return get_specific_hint(spoiler, world, checked, 'song')
 
@@ -389,6 +409,7 @@ hint_func = {
     'woth':     get_woth_hint,
     'barren':   get_barren_hint,
     'item':     get_good_item_hint,
+    'sometimes':get_sometimes_hint,    
     'song':     get_song_hint,
     'minigame': get_minigame_hint,
     'ow':       get_overworld_hint,
@@ -459,21 +480,17 @@ hint_dist_sets = {
         'random':   (0.0, 0),
         'junk':     (0.0, 0),
     },
-    'tournament': {
+    'tournament': OrderedDict({
         # (number of hints, count per hint)
-        'trial':    (0.0, 2),
-        'always':   (0.0, 2),
-        'woth':     (4.0, 2),
-        'barren':   (2.0, 2),
-        'item':     (0.0, 1),
-        'song':     (1.0, 1),
-        'minigame': (0.0, 1),
-        'ow':       (2.0, 1),
-        'dungeon':  (3.0, 1),
-        'entrance': (4.0, 1),
-        'random':   (0.0, 1),
-        'junk':     (0.0, 0),
-    },
+        'trial':     (0.0, 2),
+        'always':    (0.0, 2),
+        'woth':      (5.0, 2),
+        'barren':    (3.0, 2),
+        'entrance':  (4.0, 2),
+        'sometimes': (5.0, 2),
+        'random':    (0.0, 1),
+        'junk':      (0.0, 0),
+    }),
 }
 
 
@@ -483,6 +500,7 @@ def buildGossipHints(spoiler, world):
     hintExclusions(world, clear_cache=True)
 
     world.barren_dungeon = False
+    world.woth_dungeon = 0
 
     playthrough = Playthrough.max_explore([w.state for w in spoiler.worlds])
     for stone in gossipLocations.values():
