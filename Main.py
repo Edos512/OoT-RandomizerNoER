@@ -21,7 +21,6 @@ from Cosmetics import patch_cosmetics
 from DungeonList import create_dungeons
 from Fill import distribute_items_restrictive, ShuffleError
 from Item import Item
-from ItemList import item_table
 from ItemPool import generate_itempool
 from Hints import buildGossipHints
 from Utils import default_output_path, is_bundled, subprocess_args, data_path
@@ -81,7 +80,7 @@ def main(settings, window=dummy_window()):
     settings.remove_disabled()
     logger.info('(Original) Settings string: %s\n', settings.settings_string)
     random.seed(settings.numeric_seed)
-    settings.resolve_random_settings()
+    settings.resolve_random_settings(cosmetic=False)
     logger.debug(settings.get_settings_display())
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
@@ -443,7 +442,7 @@ def cosmetic_patch(settings, window=dummy_window()):
     window.update_status('Creating Patch File')
 
     # base the new patch file on the base patch file
-    rom.original = patched_base_rom
+    rom.original.buffer = patched_base_rom
 
     rom.update_crc()
     create_patch_file(rom, patchfilename)
@@ -511,7 +510,7 @@ def create_playthrough(spoiler):
     # Get all item locations in the worlds
     item_locations = [location for state in playthrough.state_list for location in state.world.get_filled_locations() if location.item.advancement]
     # Omit certain items from the playthrough
-    internal_locations = {location for location in item_locations if location.item.name not in item_table}
+    internal_locations = {location for location in item_locations if location.internal}
     # Generate a list of spheres by iterating over reachable locations without collecting as we go.
     # Collecting every item in one sphere means that every item
     # in the next sphere is collectable. Will contain every reachable item this way.
@@ -553,7 +552,7 @@ def create_playthrough(spoiler):
             # Generic events might show up or not, as usual, but since we don't
             # show them in the final output, might as well skip over them. We'll
             # still need them in the final pass, so make sure to include them.
-            if old_item.name not in item_table:
+            if location.internal:
                 required_locations.append(location)
                 continue
 

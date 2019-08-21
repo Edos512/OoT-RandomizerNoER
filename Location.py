@@ -1,10 +1,11 @@
 from LocationList import location_table
+from Region import TimeOfDay
 from enum import Enum
 
 
 class Location(object):
 
-    def __init__(self, name='', address=None, address2=None, default=None, type='Chest', scene=None, parent=None, filter_tags=None):
+    def __init__(self, name='', address=None, address2=None, default=None, type='Chest', scene=None, parent=None, filter_tags=None, internal=False):
         self.name = name
         self.parent_region = parent
         self.item = None
@@ -13,8 +14,7 @@ class Location(object):
         self.default = default
         self.type = type
         self.scene = scene
-        self.spot_type = 'Location'
-        self.recursion_count = { 'child': 0, 'adult': 0 }
+        self.internal = internal
         self.staleness_count = 0
         self.access_rule = lambda state, **kwargs: True
         self.access_rules = []
@@ -36,11 +36,11 @@ class Location(object):
         if self.item:
             new_location.item = self.item.copy(new_region.world)
             new_location.item.location = new_location
-        new_location.spot_type = self.spot_type
         new_location.access_rule = self.access_rule
         new_location.access_rules = list(self.access_rules)
         new_location.item_rule = self.item_rule
         new_location.locked = self.locked
+        new_location.internal = self.internal
         new_location.minor_only = self.minor_only
         new_location.disabled = self.disabled
 
@@ -71,7 +71,7 @@ class Location(object):
 
 
     # tod is passed explicitly only when we want to test for it
-    def can_reach(self, state, age=None, tod=None):
+    def can_reach(self, state, age=None, tod=TimeOfDay.NONE):
         if self.is_disabled():
             return False
 
@@ -79,8 +79,6 @@ class Location(object):
 
 
     def can_reach_simple(self, state, age=None):
-        # todo: raw evaluation of access_rule? requires nonrecursive tod checks in state
-        # and GS Token and Gossip Stone Fairy have special checks as well
         return self.access_rule(state, age=age, spot=self)
 
 

@@ -1,3 +1,6 @@
+from Region import TimeOfDay
+
+
 class Entrance(object):
 
     def __init__(self, name='', parent=None):
@@ -5,8 +8,6 @@ class Entrance(object):
         self.parent_region = parent
         self.world = parent.world
         self.connected_region = None
-        self.spot_type = 'Entrance'
-        self.recursion_count = { 'child': 0, 'adult': 0 }
         self.access_rule = lambda state, **kwargs: True
         self.access_rules = []
         self.reverse = None
@@ -21,7 +22,6 @@ class Entrance(object):
     def copy(self, new_region):
         new_entrance = Entrance(self.name, new_region)
         new_entrance.connected_region = self.connected_region.name
-        new_entrance.spot_type = self.spot_type
         new_entrance.access_rule = self.access_rule
         new_entrance.access_rules = list(self.access_rules)
         new_entrance.reverse = self.reverse
@@ -46,12 +46,12 @@ class Entrance(object):
 
 
     # tod is passed explicitly only when we want to test for it
-    def can_reach(self, state, age=None, tod=None):
+    def can_reach(self, state, age=None, tod=TimeOfDay.NONE):
         return self.access_rule(state, spot=self, age=age, tod=tod) and state.can_reach(self.parent_region, age=age, tod=tod)
 
 
-    def can_reach_simple(self, state, age=None):
-        return self.access_rule(state, age=age, spot=self)
+    def can_reach_simple(self, state, age=None, tod=TimeOfDay.NONE):
+        return self.access_rule(state, spot=self, age=age, tod=tod)
 
 
     def connect(self, region):

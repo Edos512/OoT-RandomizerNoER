@@ -80,11 +80,13 @@ export class GeneratorComponent implements OnInit {
     }
     else {
 
-      this.global.globalEmitter.subscribe(eventObj => {
+      let eventSub = this.global.globalEmitter.subscribe(eventObj => {
 
         if (eventObj.name == "init_finished") {
           console.log("Init finished event");
           this.generatorReady();
+
+          eventSub.unsubscribe();
         }
       });
     }  
@@ -114,6 +116,14 @@ export class GeneratorComponent implements OnInit {
 
       this.tabSet.changeTab.subscribe(eventObj => {
         this.activeTab = eventObj.tabTitle;
+      });
+
+      this.global.globalEmitter.subscribe(eventObj => {
+
+        if (eventObj.name == "refresh_gui") {
+          this.cd.markForCheck();
+          this.cd.detectChanges();
+        }
       });
 
     }, 0);
@@ -569,6 +579,17 @@ randomSettings() { //Electron only
           visibilityUpdates.push({ target: { controls_visibility_tab: "cosmetics-tab,sfx-tab" }, value: this.global.generator_settingsMap['repatch_cosmetics'] });
 
           visibilityUpdates.push({ target: { controls_visibility_setting: "rom,web_output_type,player_num" }, value: true });
+          visibilityUpdates.push({ target: { controls_visibility_setting: "web_wad_file,web_common_key_file,web_common_key_string,web_wad_channel_id,web_wad_channel_title" }, value: this.global.generator_settingsMap['web_output_type'] == "wad" });
+
+          this.toggleVisibility(visibilityUpdates, false);
+        }
+      }
+      else if (this.global.getGlobalVar("appType") == "patcher_only") {
+
+        if (event.tabTitle === "Generate From File") {
+
+          let visibilityUpdates = [];
+          visibilityUpdates.push({ target: { controls_visibility_setting: "rom,web_output_type" }, value: true });
           visibilityUpdates.push({ target: { controls_visibility_setting: "web_wad_file,web_common_key_file,web_common_key_string,web_wad_channel_id,web_wad_channel_title" }, value: this.global.generator_settingsMap['web_output_type'] == "wad" });
 
           this.toggleVisibility(visibilityUpdates, false);
