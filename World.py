@@ -1,20 +1,20 @@
-from State import State
-from Region import Region, TimeOfDay
+import copy
+import logging
+import random
+
+from DungeonList import create_dungeons
 from Entrance import Entrance
+from HintList import getRequiredHints
 from Hints import get_hint_area
+from Item import Item, ItemFactory, MakeEventItem
 from Location import Location, LocationFactory
 from LocationList import business_scrubs
-from DungeonList import create_dungeons
+from Region import Region, TimeOfDay
 from Rules import set_rules, set_shop_rules
-from Item import Item, ItemFactory, MakeEventItem
 from RuleParser import Rule_AST_Transformer
 from SettingsList import get_setting_info
-import logging
-import copy
-import io
-import json
-import random
-import re
+from State import State
+from Utils import read_json
 
 class World(object):
 
@@ -34,6 +34,7 @@ class World(object):
         self.scrub_prices = {}
         self.maximum_wallets = 0
         self.light_arrow_location = None
+        self.triforce_count = 0
 
         self.parser = Rule_AST_Transformer(self)
         self.event_items = set()
@@ -59,6 +60,8 @@ class World(object):
 
         self.disable_trade_revert = self.shuffle_interior_entrances or self.shuffle_overworld_entrances
         self.ensure_tod_access = self.shuffle_interior_entrances or self.shuffle_overworld_entrances
+
+        self.triforce_goal = self.triforce_goal_per_world * settings.world_count
 
         # Determine LACS Condition
         if self.shuffle_ganon_bosskey == 'lacs_medallions':
@@ -100,6 +103,8 @@ class World(object):
 
         self.resolve_random_settings()
 
+        self.always_hints = [hint.name for hint in getRequiredHints(self)]
+
 
     def copy(self):
         new_world = World(self.id, self.settings)
@@ -110,6 +115,8 @@ class World(object):
         new_world.starting_age = self.starting_age
         new_world.can_take_damage = self.can_take_damage
         new_world.shop_prices = copy.copy(self.shop_prices)
+        new_world.triforce_goal = self.triforce_goal
+        new_world.triforce_count = self.triforce_count
         new_world.maximum_wallets = self.maximum_wallets
         new_world.distribution = self.distribution
 
@@ -126,6 +133,8 @@ class World(object):
         new_world.randomized_list = list(self.randomized_list)
         for randomized_item in new_world.randomized_list:
             setattr(new_world, randomized_item, getattr(self, randomized_item))
+
+        new_world.always_hints = list(self.always_hints)
 
         return new_world
 
@@ -180,17 +189,7 @@ class World(object):
 
 
     def load_regions_from_json(self, file_path):
-        json_string = ""
-        with io.open(file_path, 'r') as file:
-            for line in file.readlines():
-                json_string += line.split('#')[0].replace('\n', ' ')
-        json_string = re.sub(' +', ' ', json_string)
-        try:
-            region_json = json.loads(json_string)
-        except json.JSONDecodeError as error:
-            raise Exception("JSON parse error around text:\n" + \
-                            json_string[error.pos-35:error.pos+35] + "\n" + \
-                            "                                   ^^\n")
+        region_json = read_json(file_path)
             
         for region in region_json:
             new_region = Region(region['region_name'])

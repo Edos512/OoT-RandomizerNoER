@@ -82,7 +82,7 @@ def main(settings, window=dummy_window()):
     random.seed(settings.numeric_seed)
     settings.resolve_random_settings(cosmetic=False)
     logger.debug(settings.get_settings_display())
-    max_attempts = 3
+    max_attempts = 1
     for attempt in range(1, max_attempts + 1):
         try:
             spoiler = generate(settings, window)
@@ -132,6 +132,9 @@ def generate(settings, window):
         set_shop_rules(world)
         set_drop_location_names(world)
         world.fill_bosses()
+
+    if settings.triforce_hunt:
+        settings.distribution.configure_triforce_hunt(worlds)
 
     logger.info('Setting Entrances.')
     set_entrances(worlds)
@@ -190,6 +193,8 @@ def patch_and_output(settings, window, spoiler, rom, start):
             random.setstate(rng_state)
             patch_rom(spoiler, world, rom)
             cosmetics_log = patch_cosmetics(settings, rom)
+            rom.update_header()
+
             window.update_progress(65 + 20*(world.id + 1)/settings.world_count)
 
             window.update_status('Creating Patch File')
@@ -443,8 +448,7 @@ def cosmetic_patch(settings, window=dummy_window()):
 
     # base the new patch file on the base patch file
     rom.original.buffer = patched_base_rom
-
-    rom.update_crc()
+    rom.update_header()
     create_patch_file(rom, patchfilename)
     logger.info("Created patchfile at: %s" % patchfilename)
     window.update_progress(95)
@@ -528,7 +532,7 @@ def create_playthrough(spoiler):
         if not collected: break
         # Gather the new entrances before collecting items.
         collection_spheres.append(collected)
-        accessed_entrances = set(filter(lambda entrance: playthrough.state_list[entrance.world.id].can_reach(entrance), remaining_entrances))
+        accessed_entrances = set(filter(playthrough.spot_access, remaining_entrances))
         entrance_spheres.append(accessed_entrances)
         remaining_entrances -= accessed_entrances
         for location in collected:
@@ -605,7 +609,7 @@ def create_playthrough(spoiler):
             continue
         # Gather the new entrances before collecting items.
         collection_spheres.append(list(collected))
-        accessed_entrances = set(filter(lambda entrance: playthrough.state_list[entrance.world.id].can_reach(entrance), remaining_entrances))
+        accessed_entrances = set(filter(playthrough.spot_access, remaining_entrances))
         entrance_spheres.append(accessed_entrances)
         remaining_entrances -= accessed_entrances
         for location in collected:

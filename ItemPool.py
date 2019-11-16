@@ -119,6 +119,12 @@ item_difficulty_max = {
     },
 }
 
+TriforceCounts = {
+    'plentiful': 2.00,
+    'balanced':  1.50,
+    'scarce':    1.25,
+    'minimal':   1.00,
+}
 
 DT_vanilla = (
     ['Recovery Heart'] * 2)
@@ -540,7 +546,7 @@ vanillaMC = {
     'Forest Temple MQ Map Chest': 'Map (Forest Temple)',
     'Ice Cavern MQ Map Chest': 'Map (Ice Cavern)',
     'Jabu Jabus Belly MQ Map Chest': 'Map (Jabu Jabus Belly)',
-    'Shadow Temple MQ Early Gibdos Chest': 'Map (Shadow Temple)',
+    'Shadow Temple MQ Map Chest': 'Map (Shadow Temple)',
     'Spirit Temple MQ Map Chest': 'Map (Spirit Temple)',
     'Water Temple MQ Map Chest': 'Map (Water Temple)',
 }
@@ -611,7 +617,7 @@ vanillaSK = {
     'Gerudo Training Grounds MQ Underwater Silver Rupee Chest': 'Small Key (Gerudo Training Grounds)',
     'Shadow Temple MQ Falling Spikes Switch Chest': 'Small Key (Shadow Temple)',
     'Shadow Temple MQ Invisible Blades Invisible Chest': 'Small Key (Shadow Temple)',
-    'Shadow Temple MQ Map Chest': 'Small Key (Shadow Temple)',
+    'Shadow Temple MQ Early Gibdos Chest': 'Small Key (Shadow Temple)',
     'Shadow Temple MQ Near Ship Invisible Chest': 'Small Key (Shadow Temple)',
     'Shadow Temple MQ Wind Hint Chest': 'Small Key (Shadow Temple)',
     'Shadow Temple MQ Freestanding Key': 'Small Key (Shadow Temple)',
@@ -733,6 +739,7 @@ def generate_itempool(world):
         world.get_location(location).locked = True
 
     world.initialize_items()
+    world.distribution.set_complete_itempool(world.itempool)
 
 
 def get_pool_core(world):
@@ -745,7 +752,7 @@ def get_pool_core(world):
         placed_items['Kokiri Sword Chest'] = 'Kokiri Sword'
 
     ruto_bottles = 1
-    if world.open_fountain:
+    if world.zora_fountain == 'open':
         ruto_bottles = 0
     elif world.item_pool_value == 'plentiful':
         ruto_bottles += 1
@@ -915,6 +922,12 @@ def get_pool_core(world):
     elif world.tokensanity == 'dungeons':
         for location in skulltula_locations_final:
             if world.get_location(location).scene >= 0x0A:
+                placed_items[location] = 'Gold Skulltula Token'
+            else:
+                pool.append('Gold Skulltula Token')
+    elif world.tokensanity == 'overworld':
+        for location in skulltula_locations_final:
+            if world.get_location(location).scene < 0x0A:
                 placed_items[location] = 'Gold Skulltula Token'
             else:
                 pool.append('Gold Skulltula Token')
@@ -1137,7 +1150,7 @@ def get_pool_core(world):
         for item in [item for dungeon in world.dungeons if dungeon.name != 'Ganons Castle' for item in dungeon.boss_key]:
             world.state.collect(item)
             pool.extend(get_junk_item())
-    if world.shuffle_ganon_bosskey == 'remove':
+    if world.shuffle_ganon_bosskey in ['remove', 'triforce']:
         for item in [item for dungeon in world.dungeons if dungeon.name == 'Ganons Castle' for item in dungeon.boss_key]:
             world.state.collect(item)
             pool.extend(get_junk_item())
@@ -1175,16 +1188,20 @@ def get_pool_core(world):
             except KeyError:
                 continue
 
-    if world.shuffle_ganon_bosskey == 'vanilla':
-        placed_items['Ganons Tower Boss Key Chest'] = 'Boss Key (Ganons Castle)'
 
     if not world.keysanity and not world.dungeon_mq['Fire Temple']:
         world.state.collect(ItemFactory('Small Key (Fire Temple)'))
     if not world.dungeon_mq['Water Temple']:
         world.state.collect(ItemFactory('Small Key (Water Temple)'))
 
+    if world.triforce_hunt:
+        trifroce_count = int(world.triforce_goal_per_world * TriforceCounts[world.item_pool_value])
+        pending_junk_pool.extend(['Triforce Piece'] * trifroce_count)
+
     if world.shuffle_ganon_bosskey in ['lacs_vanilla', 'lacs_medallions', 'lacs_stones', 'lacs_dungeons']:
         placed_items['Zelda'] = 'Boss Key (Ganons Castle)'
+    elif world.shuffle_ganon_bosskey == 'vanilla':
+        placed_items['Ganons Tower Boss Key Chest'] = 'Boss Key (Ganons Castle)'
 
     if world.item_pool_value == 'plentiful':
         pool.extend(easy_items)
