@@ -81,10 +81,20 @@ class Location(object):
         if self.type in ('Collectable', 'BossHeart', 'GS Token', 'Shop'):
             return True
         if self.type == 'Chest':
-            return self.scene == 0x10 # Treasure Chest Game Prize
+            return self.scene == 0x10 or self.world.correct_chest_sizes  # Treasure Chest Game Prize or CSMC
         if self.type == 'NPC':
             return self.scene in (0x4B, 0x51, 0x57) # Bombchu Bowling, Hyrule Field (OoT), Lake Hylia (RL/FA)
         return False
+
+
+    def has_item(self):
+        return self.item is not None
+
+    def has_no_item(self):
+        return self.item is None
+
+    def has_progression_item(self):
+        return self.item is not None and self.item.advancement
 
 
     def __str__(self):

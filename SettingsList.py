@@ -206,15 +206,15 @@ logic_tricks = {
                     All spider web walls in Deku Tree basement can be burnt
                     by adult using just a bow shooting through torches. Applies
                     to the web obstructing the door to the single scrub room,
-                    the web obstrcuting the bombable wall in the back room
+                    the web obstructing the bombable wall in the back room
                     and the circular floor web dropping to Gohma.
 
-                    For the cicular web dropping to Gohma, backflip onto the
+                    For the circular web dropping to Gohma, backflip onto the
                     chest near the torch at the bottom of the vine wall. With a
-                    precise position you can shoot throught the torch to the
+                    precise position you can shoot through the torch to the
                     right edge of the circular web.
 
-                    This allows complete adult Deku Tree with no fire source.
+                    This allows completion of adult Deku Tree with no fire source.
                     '''},
     'Hammer Rusted Switches Through Walls': {
         'name'    : 'logic_rusted_switches',
@@ -583,7 +583,7 @@ logic_tricks = {
         'name'    : 'logic_water_river_gs',
         'tooltip' : '''\
                     Standing on the exposed ground toward the end of
-                    the river, a precise Longhost use can obtain the
+                    the river, a precise Longshot use can obtain the
                     token. The Longshot cannot normally reach far
                     enough to kill the Skulltula, however. You'll
                     first have to find some other way of killing it.
@@ -871,7 +871,7 @@ logic_tricks = {
         'tooltip' : '''\
                     With a precise jumpslash from above, you
                     can reach the backdoor to the west
-                    countyard without Hover Boots.
+                    courtyard without Hover Boots.
                     '''},
     'Forest Temple Scarecrow Route': {
         'name'    : 'logic_forest_scarecrow',
@@ -1319,7 +1319,7 @@ setting_infos = [
         disable        = {
             True : {
                 'sections' : ['open_section', 'shuffle_section', 'shuffle_dungeon_section'],
-                'settings' : ['starting_age', 'entrance_shuffle', 'bombchus_in_logic', 'one_item_per_dungeon'],
+                'settings' : ['starting_age', 'triforce_hunt', 'triforce_goal_per_world', 'entrance_shuffle', 'bombchus_in_logic', 'one_item_per_dungeon'],
             }
         },
         shared         = True,
@@ -1495,7 +1495,7 @@ setting_infos = [
             Select the amount of Triforce Pieces required to beat the game.
 
             In multiworld, each world will have the same number of triforces 
-            in them. The required ammount will be per world collectively. 
+            in them. The required amount will be per world collectively. 
             For example, if this is set to 20 in a 2 player multiworld, players 
             need 40 total, but one player could obtain 30 and the other 10. 
 
@@ -1646,9 +1646,6 @@ setting_infos = [
         ''',
         shared         = True,
         disabled_default = 0,
-        gui_params     = {
-            'randomize_key': 'randomize_settings',
-        },
     ),
     Checkbutton(
         name           = 'no_escape_sequence',
@@ -2518,6 +2515,30 @@ setting_infos = [
             without the correct text. Similarly, non-shop
             items sold in shops will also retain standard
             text for the purpose of accurate price checks.
+        ''',
+        shared         = True,
+    ),
+    Combobox(
+        name           = 'ice_trap_appearance',
+        gui_text       = 'Ice Trap Appearance',
+        default        = 'major_only',
+        choices        = {
+            'major_only': 'Major Items Only',
+            'junk_only':  'Junk Items Only',
+            'anything':   'Anything',
+        },
+        gui_tooltip    = '''\
+            Changes the categories of items Ice Traps may
+            appear as, both when freestanding and when in
+            chests with Chest Size Matches Contents enabled. 
+
+            'Major Items Only': Ice Traps appear as Major
+            Items (and in large chests if CSMC enabled).
+
+            'Junk Items Only': Ice Traps appear as Junk
+            Items (and in small chests if CSMC enabled).
+
+            'Anything': Ice Traps may appear as anything.
         ''',
         shared         = True,
     ),
@@ -3512,7 +3533,7 @@ for info in setting_infos:
         for option, disabling in info.disable.items():
             for setting in disabling.get('settings', []):
                 create_dependency(setting, info, option)
-            for section in disabling.get('setions', []):
+            for section in disabling.get('sections', []):
                 for setting in get_settings_from_section(section):
                     create_dependency(setting, info, option)
             for tab in disabling.get('tabs', []):

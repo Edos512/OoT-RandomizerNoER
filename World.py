@@ -142,6 +142,9 @@ class World(object):
     def resolve_random_settings(self):
         # evaluate settings (important for logic, nice for spoiler)
         self.randomized_list = []
+        if self.randomize_settings:
+            rnd_settings = get_setting_info('randomize_settings').disable[True]['settings']
+            self.randomized_list.extend(rnd_settings)
         if self.big_poe_count_random:
             self.big_poe_count = random.randint(1, 10)
             self.randomized_list.append('big_poe_count')
@@ -464,11 +467,15 @@ class World(object):
 
 
     def get_unfilled_locations(self):
-        return [location for location in self.get_locations() if location.item is None]
+        return filter(Location.has_no_item, self.get_locations())
 
 
     def get_filled_locations(self):
-        return [location for location in self.get_locations() if location.item is not None]
+        return filter(Location.has_item, self.get_locations())
+
+
+    def get_progression_locations(self):
+        return filter(Location.has_progression_item, self.get_locations())
 
 
     def get_entrances(self):

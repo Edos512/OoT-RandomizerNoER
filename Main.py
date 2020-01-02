@@ -154,9 +154,7 @@ def generate(settings, window):
         window.update_status('Calculating Hint Data')
         logger.info('Calculating hint data.')
         State.update_required_items(spoiler)
-        for world in worlds:
-            world.update_useless_areas(spoiler)
-            buildGossipHints(spoiler, world)
+        buildGossipHints(spoiler, worlds)
         window.update_progress(55)
     spoiler.build_file_hash()
     return spoiler
@@ -373,9 +371,9 @@ def from_patch_file(settings, window=dummy_window()):
         if compressor_path != "":
             run_process(window, logger, [compressor_path, uncompressed_output_path, output_compress_path])
         os.remove(uncompressed_output_path)
-        logger.info("Created compessed rom at: %s" % output_compress_path)
+        logger.info("Created compressed rom at: %s" % output_compress_path)
     else:
-        logger.info("Created uncompessed rom at: %s" % output_path)
+        logger.info("Created uncompressed rom at: %s" % output_path)
 
     window.update_progress(95)
 
@@ -512,7 +510,7 @@ def create_playthrough(spoiler):
 
     playthrough = RewindablePlaythrough([world.state for world in worlds])
     # Get all item locations in the worlds
-    item_locations = [location for state in playthrough.state_list for location in state.world.get_filled_locations() if location.item.advancement]
+    item_locations = playthrough.progression_locations()
     # Omit certain items from the playthrough
     internal_locations = {location for location in item_locations if location.internal}
     # Generate a list of spheres by iterating over reachable locations without collecting as we go.
